@@ -1,0 +1,10 @@
+apiVersion: pkg.kform.dev/v1alpha1
+kind: PackageRevision
+metadata:
+  name: repo-catalog:infra_pkg2:v1
+  namespace: default
+spec:
+  lifecycle: draft
+  package: infra2/pkg2
+  repository: repo-catalog
+  workspace: workspace11

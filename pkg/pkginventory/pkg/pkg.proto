@@ -1,0 +1,21 @@
+syntax = "proto3";
+package pkg;
+option go_package = "github.com/kform-dev/pkg-server/pkg/pkginventory/pkg";
+import "pkg/pkginventory/api/api.proto";
+
+service PackageResources {
+    rpc Get(Get.Request) returns (Get.Response);
+}
+
+message Get {
+    message Request {
+        string cluster = 1;
+        string package = 2;
+    }
+
+    message Response {
+        api.PackageRevision packageRevision = 1;
+    }
+}
+
+

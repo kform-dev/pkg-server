@@ -1,0 +1,42 @@
+syntax = "proto3";
+package api;
+option go_package = "github.com/kform-dev/pkg-server/pkg/pkginventory/api";
+
+service APIResources {
+    rpc Get(Get.Request) returns (Get.Response);
+}
+
+message Get {
+    message Request {
+        repeated GVK gvks = 1;
+    }
+
+    message Response {
+        repeated GVKRef gvkRefs = 1;
+    }
+}
+
+message GVKRef {
+    GVK gvk = 1;
+    GVKRefType type = 2;
+    repeated PackageRevision packageRevisions = 3;
+}
+
+message PackageRevision {
+    string name = 1;
+    string package = 2;
+    string revision = 3;
+    string repository = 4;
+    string workspace = 5;
+}
+
+message GVK {
+    string apiVersion = 1;
+    string kind = 2; 
+}
+
+enum GVKRefType{
+    UNKNOWN = 0;
+    ROOT = 1;
+    PACKAGE = 2;
+}

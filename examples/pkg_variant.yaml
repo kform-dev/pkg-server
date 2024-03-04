@@ -1,0 +1,50 @@
+apiVersion: config.pkg.kform.dev/v1alpha1
+kind: PackageVariant
+metadata:
+  name: cluster-edge01
+  namespace: default
+spec:
+  upstream:
+    repository: repo-catalog
+    realm: infra/workload-cluster
+    package: capi-kind
+    revision: v2
+  downstream:
+    target: mgmt
+    repository: repo-target
+    realm: infra/workload-cluster
+    package: capi-kind
+  packageContext:
+    readinessGates:
+    - conditionType: pkg.kform.dev/schedule
+    - conditionType: pkg.kform.dev/process
+    - conditionType: pkg.kform.dev/approve
+    - conditionType: pkg.kform.dev/install
+    labels:
+      a: b
+    annotations:
+      policy.pkg.kform.dev/approval: initial
+    inputs:
+    - apiVersion: claim.kform.dev/v1alpha1
+      kind: Cluster
+      metadata:
+        name: edge01
+        namespace: default
+        annotations:
+          kform.dev/resource-id: context ## this serves as a way to add a specific resource-id 
+      spec: 
+        location: us-west1
+        version: v1.27.1
+        serviceDomain: cluster.local
+        controlPlaneRedundancy: false
+    - apiVersion: claim.pkg.kform.dev/v1alpha1
+      kind: PackageDependency
+      metadata:
+        name: templates
+        namespace: example
+      spec: 
+        upstream:
+          repository: repo-catalog
+          realm: infra/workload-cluster
+          package: capi-kind-templates
+          revision: v1
