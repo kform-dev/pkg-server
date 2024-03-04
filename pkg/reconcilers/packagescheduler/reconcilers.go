@@ -358,7 +358,7 @@ func (r *reconciler) getLatestCatalogPackageRevision(ctx context.Context, upstre
 			},
 		*/
 	}
-	log.Debug("getLatestCatalogPackageRevision", "upstream", upstream)
+	log.Debug("getLatestCatalogPackageRevision", "upstream", upstream.String())
 	pkgRevList := pkgv1alpha1.PackageRevisionList{}
 	if err := r.List(ctx, &pkgRevList, opts...); err != nil {
 		return nil, err
