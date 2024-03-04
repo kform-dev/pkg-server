@@ -97,5 +97,7 @@ func (r PackageID) OutDir() string {
 }
 
 func (r PackageID) DNSName() string {
-	return fmt.Sprintf("%s.%s.%s", r.Target, strings.ReplaceAll(r.Realm, "/", "."), r.Package)
+	// had to trim this to please  config-management
+	//return fmt.Sprintf("%s.%s.%s", r.Target, strings.ReplaceAll(r.Realm, "/", "."), r.Package)
+	return fmt.Sprintf("%s.%s", r.Target, r.Package)
 }
