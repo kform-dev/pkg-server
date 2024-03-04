@@ -84,19 +84,19 @@ func PackageToDir(pkg string) string {
 	return strings.ReplaceAll(pkg, ":", "/")
 }
 
-func (r PackageID) Branch() string {
+func (r *PackageID) Branch() string {
 	return path.Join(r.Target, r.Realm, r.Package, r.Workspace)
 }
 
-func (r PackageID) GitRevision() string {
+func (r *PackageID) GitRevision() string {
 	return path.Join(r.Target, r.Realm, r.Package, r.Revision)
 }
 
-func (r PackageID) OutDir() string {
+func (r *PackageID) OutDir() string {
 	return path.Join(r.Target, r.Realm, r.Package, "out")
 }
 
-func (r PackageID) DNSName() string {
+func (r *PackageID) DNSName() string {
 	// had to trim this to please  config-management
 	//return fmt.Sprintf("%s.%s.%s", r.Target, strings.ReplaceAll(r.Realm, "/", "."), r.Package)
 	return fmt.Sprintf("%s.%s", r.Target, r.Package)
