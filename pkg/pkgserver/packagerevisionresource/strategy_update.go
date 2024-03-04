@@ -124,7 +124,7 @@ func (r *strategy) Update(ctx context.Context, key types.NamespacedName, obj, ol
 		log.Error("pkgRevResources update unexpected object", "obj", obj)
 		return obj, fmt.Errorf("unexpected object expecting: %s, got: %s", pkgv1alpha1.PackageRevisionResourcesKind, reflect.TypeOf(obj).Name())
 	}
-	cachedRepo, err := r.getRepo(ctx, pkgRevResources)
+	_, cachedRepo, err := r.getRepo(ctx, pkgRevResources)
 	if err != nil {
 		log.Error("pkgRevResources update cannot get repo from cache", "error", err.Error())
 		return obj, err
@@ -175,7 +175,7 @@ func (r *strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object
 
 */
 
-func (r *strategy) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevisionResources) (*cache.CachedRepository, error) {
+func (r *strategy) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevisionResources) (bool, *cache.CachedRepository, error) {
 	log := log.FromContext(ctx)
 	repokey := types.NamespacedName{
 		Namespace: cr.Namespace,
@@ -184,8 +184,9 @@ func (r *strategy) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevisionR
 	repo := &configv1alpha1.Repository{}
 	if err := r.client.Get(ctx, repokey, repo); err != nil {
 		log.Error("cannot get repo", "error", err)
-		return nil, err
+		return false, nil, err
 	}
 
-	return r.cache.Open(ctx, repo)
+	cachedRepo, err := r.cache.Open(ctx, repo)
+	return repo.Spec.Deployment, cachedRepo, err
 }

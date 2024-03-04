@@ -53,29 +53,33 @@ func (r *strategy) Create(ctx context.Context, key types.NamespacedName, obj run
 			return obj, err
 		}
 	*/
-	
+
 	pkgRevResources, ok := obj.(*pkgv1alpha1.PackageRevisionResources)
 	if !ok {
 		log.Error("pkgRevResources create unexpected object", "obj", obj)
 		return obj, fmt.Errorf("unexpected object expecting: %s, got: %s", pkgv1alpha1.PackageRevisionResourcesKind, reflect.TypeOf(obj).Name())
 	}
-	cachedRepo, err := r.getRepo(ctx, pkgRevResources)
+	deployment, cachedRepo, err := r.getRepo(ctx, pkgRevResources)
 	if err != nil {
 		log.Error("pkgRevResources update cannot get repo from cache", "error", err.Error())
 		return obj, err
 	}
 
-	pkgRev := pkgv1alpha1.BuildPackageRevision(
-		pkgRevResources.ObjectMeta,
-		pkgv1alpha1.PackageRevisionSpec{
-			PackageID: *pkgRevResources.Spec.PackageID.DeepCopy(),
-		},
-		pkgv1alpha1.PackageRevisionStatus{},
-	)
+	// for non deployments we dont have to update the git
+	// we just want to please the client, with the watch notification
+	if deployment {
+		pkgRev := pkgv1alpha1.BuildPackageRevision(
+			pkgRevResources.ObjectMeta,
+			pkgv1alpha1.PackageRevisionSpec{
+				PackageID: *pkgRevResources.Spec.PackageID.DeepCopy(),
+			},
+			pkgv1alpha1.PackageRevisionStatus{},
+		)
 
-	if err := cachedRepo.UpsertPackageRevision(ctx, pkgRev, pkgRevResources.Spec.Resources); err != nil {
-		log.Error("pkgRevResources update cannot update resources", "error", err.Error())
-		return obj, err
+		if err := cachedRepo.UpsertPackageRevision(ctx, pkgRev, pkgRevResources.Spec.Resources); err != nil {
+			log.Error("pkgRevResources update cannot update resources", "error", err.Error())
+			return obj, err
+		}
 	}
 
 	r.notifyWatcher(ctx, watch.Event{
