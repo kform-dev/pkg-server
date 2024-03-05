@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -289,7 +290,7 @@ func (r *gitRepository) pushTag(ctx context.Context, pkgRev *pkgv1alpha1.Package
 		},
 		Message: string(pkgTagName),
 	})
-	if err != nil {
+	if !strings.Contains(err.Error(), "tag already exists") {
 		log.Error("cannot create tag", "error", err)
 		return err
 	}
