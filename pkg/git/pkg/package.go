@@ -136,12 +136,12 @@ func (r *packageList) discoverPackages(ctx context.Context, tree *object.Tree, c
 }
 
 // buildGitDiscoveredPackageRevision creates a gitPackageRevision for the packageListEntry
-func (r *packageListEntry) buildPackageRevision(revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
+func (r *packageListEntry) buildPackageRevision(catalog bool, revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
 	repo := r.parent.parent
 
 	annotations := map[string]string{}
 	var pkgID pkgid.PackageID
-	if strings.HasPrefix(r.path, pkgid.PkgTarget_Catalog) {
+	if catalog {
 		pkgID = pkgid.PackageID{
 			Target:     pkgid.PkgTarget_Catalog,
 			Repository: repo.cr.Name,

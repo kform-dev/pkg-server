@@ -122,7 +122,7 @@ func (r *gitRepository) getTaggedPackage(ctx context.Context, tagRef *plumbing.R
 		log.Info("package not found", "name", name)
 		return nil
 	}
-	return krmPackage.buildPackageRevision(revision, ws, commit)
+	return krmPackage.buildPackageRevision(!r.cr.Spec.Deployment, revision, ws, commit)
 }
 
 func (r *gitRepository) getBranchAndCommitFromTag(ctx context.Context, packageName string, tagRef *plumbing.Reference) (string, *object.Commit, error) {
