@@ -111,7 +111,7 @@ func (r *Store) UpdatePkgRevAPI(ctx context.Context, cr *pkgv1alpha1.PackageRevi
 	// we gather the apis that are referenced in this package revision
 	// k8s api extensions are defined on the basis of CRD(s) or APIServices
 	apiReferences := newAPIreferences(r.recorder)
-	apiReferences.gatherAPIs(ctx, cr, outputs)
+	apiReferences.gatherAPIs(ctx, outputs)
 	// dont proceed if there was an error found
 	if r.recorder.Get().HasError() {
 

@@ -32,11 +32,13 @@ import (
 	"github.com/kform-dev/pkg-server/pkg/reconcilers"
 	"github.com/kform-dev/pkg-server/pkg/reconcilers/ctrlconfig"
 	"github.com/kform-dev/pkg-server/pkg/reconcilers/lease"
+	"github.com/kform-dev/pkg-server/pkg/repository"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -203,42 +205,100 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					"Error", "error %s", err.Error())
 				return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 			}
+			if cr.Spec.PackageID.Revision == "" {
+				// allocate a revision
 
-			// approval of the pkgRev
-			log.Debug("approval pkgrev", "before", cr.Spec.PackageID.Revision)
-			if err := cachedRepo.UpsertPackageRevision(ctx, cr, map[string]string{}); err != nil {
-				//log.Error("cannot approve packagerevision", "error", err)
-				cr.SetConditions(condition.Failed(err.Error()))
-				r.recorder.Eventf(cr, corev1.EventTypeWarning,
-					"Error", "error %s", err.Error())
-				return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
-			}
-			// TODO do an update because of the revision that got allocated
-			log.Debug("approval pkgrev", "after", cr.Spec.PackageID.Revision)
-			cr = cr.DeepCopy()
-			if err := r.Update(ctx, cr); err != nil {
-				//log.Error("cannot update packagerevision", "error", err)
-				cr.SetConditions(condition.Failed(err.Error()))
-				r.recorder.Eventf(cr, corev1.EventTypeWarning,
-					"Error", "error %s", err.Error())
-				return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
-			}
-			/*
-				pkgRevResources := pkgv1alpha1.BuildPackageRevisionResources(
-					cr.ObjectMeta,
-					pkgv1alpha1.PackageRevisionResourcesSpec{
-						PackageID: *cr.Spec.PackageID.DeepCopy(),
-					}
-					pkgv1alpha1.PackageRevisionResourcesStatus{},
-				)
-				if err := r.Update(ctx, pkgRevResources); err != nil {
+				repoPkgRevs, err := cachedRepo.ListPackageRevisions(ctx, &repository.ListOption{PackageID: &cr.Spec.PackageID})
+				if err != nil {
+					//log.Error("cannot get repository", "error", err)
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+				opts := []client.ListOption{
+					client.InNamespace(cr.Namespace),
+					client.MatchingFields{"spec.packageID.package": cr.Spec.PackageID.Package},
+				}
+				storedPkgRevs := &pkgv1alpha1.PackageRevisionList{}
+				if err := r.List(ctx, storedPkgRevs, opts...); err != nil {
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+
+				allocatedRevisions := sets.New[string]()
+				for _, pkgRev := range repoPkgRevs {
+					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+				}
+				for _, pkgRev := range storedPkgRevs.Items {
+					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+				}
+				nextRev, err := pkgid.NextRevisionNumber(allocatedRevisions.UnsortedList())
+				if err != nil {
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+				cr.Spec.PackageID.Revision = nextRev
+				if err := r.Update(ctx, cr); err != nil {
 					//log.Error("cannot update packagerevision", "error", err)
 					cr.SetConditions(condition.Failed(err.Error()))
 					r.recorder.Eventf(cr, corev1.EventTypeWarning,
 						"Error", "error %s", err.Error())
 					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
-			*/
+				// we requeue and ensure the pkg tag
+				return ctrl.Result{Requeue: true}, nil
+
+				/* attempt 2
+				// approval of the pkgRev
+				log.Debug("approval pkgrev", "before", cr.Spec.PackageID.Revision)
+				if err := cachedRepo.UpsertPackageRevision(ctx, cr, map[string]string{}); err != nil {
+					//log.Error("cannot approve packagerevision", "error", err)
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+				// TODO do an update because of the revision that got allocated
+				log.Debug("approval pkgrev", "after", cr.Spec.PackageID.Revision)
+				cr = cr.DeepCopy()
+				if err := r.Update(ctx, cr); err != nil {
+					//log.Error("cannot update packagerevision", "error", err)
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+				*/
+				/*
+					pkgRevResources := pkgv1alpha1.BuildPackageRevisionResources(
+						cr.ObjectMeta,
+						pkgv1alpha1.PackageRevisionResourcesSpec{
+							PackageID: *cr.Spec.PackageID.DeepCopy(),
+						}
+						pkgv1alpha1.PackageRevisionResourcesStatus{},
+					)
+					if err := r.Update(ctx, pkgRevResources); err != nil {
+						//log.Error("cannot update packagerevision", "error", err)
+						cr.SetConditions(condition.Failed(err.Error()))
+						r.recorder.Eventf(cr, corev1.EventTypeWarning,
+							"Error", "error %s", err.Error())
+						return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+					}
+				*/
+			}
+			// ensure Tag
+			if err := cachedRepo.EnsurePackageRevision(ctx, cr); err != nil {
+				cr.SetConditions(condition.Failed(err.Error()))
+				r.recorder.Eventf(cr, corev1.EventTypeWarning,
+					"Error", "error %s", err.Error())
+				return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+			}
+
 		}
 	} else {
 		// only act if the ready condition was not true
@@ -337,7 +397,7 @@ func (r *reconciler) getResources(ctx context.Context, cr *pkgv1alpha1.PackageRe
 	}
 	key := types.NamespacedName{
 		Namespace: upstreamPkgRev.Namespace,
-		Name: upstreamPkgRev.Name,
+		Name:      upstreamPkgRev.Name,
 	}
 	log.Info("getResources", "pkgRevResoureKey", key.String())
 	pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}

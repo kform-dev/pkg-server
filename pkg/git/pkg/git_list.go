@@ -27,17 +27,18 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/storer"
 	"github.com/henderiw/logger/log"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
+	"github.com/kform-dev/pkg-server/pkg/repository"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func (r *gitRepository) ListPackageRevisions(ctx context.Context) ([]*pkgv1alpha1.PackageRevision, error) {
+func (r *gitRepository) ListPackageRevisions(ctx context.Context, opt *repository.ListOption) ([]*pkgv1alpha1.PackageRevision, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return r.listPackageRevisions(ctx, nil)
+	return r.listPackageRevisions(ctx, opt)
 }
 
-func (r *gitRepository) listPackageRevisions(ctx context.Context, filter *packageFilter) ([]*pkgv1alpha1.PackageRevision, error) {
+func (r *gitRepository) listPackageRevisions(ctx context.Context, opt *repository.ListOption) ([]*pkgv1alpha1.PackageRevision, error) {
 	log := log.FromContext(ctx)
 
 	if err := r.repo.FetchRemoteRepository(ctx); err != nil {
@@ -45,83 +46,38 @@ func (r *gitRepository) listPackageRevisions(ctx context.Context, filter *packag
 	}
 
 	pkgRevs := []*pkgv1alpha1.PackageRevision{}
-
-	listRefsFunc := func(ctx context.Context, ref *plumbing.Reference) error {
+	if err := r.repo.ListRefs(ctx, func(ctx context.Context, ref *plumbing.Reference) error {
 		switch refName := ref.Name(); {
 		case isTagInLocalRepo(refName):
-			// tagged -> release
-			pkgRev := r.getTaggedPackage(ctx, ref)
-			if pkgRev == nil {
-				log.Info("ignore tagged pkg nil", "ref", ref)
-			} else {
-				if !IsFiltered(filter, pkgRev) {
+			if !IsFiltered(refName, opt) {
+				pkgRev := r.getTaggedPackage(ctx, ref)
+				if pkgRev == nil {
+					log.Info("ignore tagged pkg nil", "ref", ref)
+				} else {
 					pkgRevs = append(pkgRevs, pkgRev)
 				}
 			}
 		default:
-			// do nothing as we only look at released packages for discovery
+			// do nothing as we only look at released packages when we list packageRevisions
 		}
 		return nil
-	}
-
-	if err := r.repo.ListRefs(ctx, listRefsFunc); err != nil {
+	}); err != nil {
 		return pkgRevs, err
 	}
 	return pkgRevs, nil
 }
 
 // packageFilter filters
-type packageFilter struct {
-	// Name filters by the name of the objects
-	Name string
-	// Package filters to packages with the given name.
-	Realm string
-	// Package filters to packages with the given name.
-	Package string
-	// Revision filters to revisions with the given name.
-	Revision string
-	// Workspace filters the workspaces with the given name.
-	Workspace string
-}
-
-func IsFiltered(pkgFilter *packageFilter, pkgrev *pkgv1alpha1.PackageRevision) bool {
-	if pkgFilter == nil {
+func IsFiltered(refName plumbing.ReferenceName, opt *repository.ListOption) bool {
+	if opt == nil {
 		return false
 	}
 	filter := true
-	if pkgFilter.Name != "" {
-		if pkgrev.Name == pkgFilter.Name {
+	if opt.PackageID != nil {
+		if strings.Contains(refName.String(), opt.PackageID.Path()) {
 			filter = false
 		} else {
-			filter = true
-		}
-	}
-	if pkgFilter.Realm != "" {
-		if pkgrev.Spec.PackageID.Realm == pkgFilter.Realm {
 			filter = false
-		} else {
-			filter = true
-		}
-	}
-	if pkgFilter.Package != "" {
-		if pkgrev.Spec.PackageID.Package == pkgFilter.Package {
-			filter = false
-		} else {
-			filter = true
-		}
-	}
-	if pkgFilter.Revision != "" {
-		if pkgrev.Spec.PackageID.Revision == pkgFilter.Revision {
-			filter = false
-		} else {
-			filter = true
-		}
-	}
-	if pkgFilter.Workspace != "" {
-		if pkgrev.Spec.PackageID.Workspace == pkgFilter.Workspace {
-			filter = false
-		} else {
-			filter = true
 		}
 	}
 	return filter
@@ -166,7 +122,7 @@ func (r *gitRepository) getTaggedPackage(ctx context.Context, tagRef *plumbing.R
 		log.Info("package not found", "name", name)
 		return nil
 	}
-	return krmPackage.buildGitDiscoveredPackageRevision(ctx, revision, ws, commit)
+	return krmPackage.buildPackageRevision(revision, ws, commit)
 }
 
 func (r *gitRepository) getBranchAndCommitFromTag(ctx context.Context, packageName string, tagRef *plumbing.Reference) (string, *object.Commit, error) {
@@ -194,25 +150,24 @@ func (r *gitRepository) getBranchAndCommitFromTagHash(ctx context.Context, packa
 		if isBranchInLocalRepo(ref.Name()) {
 			if !strings.Contains(ref.Name().String(), packageName) {
 				// the tag and branch dont match
-			} else {
-				// check the commits for this branch
-				commits, err := r.repo.Repo.Log(&git.LogOptions{From: ref.Hash()})
+				return nil
+			}
+			// check the commits for this branch
+			commits, err := r.repo.Repo.Log(&git.LogOptions{From: ref.Hash()})
+			if err != nil {
+				return err
+			}
+			for {
+				commit, err := commits.Next()
 				if err != nil {
-
-					return err
+					break
 				}
-				for {
-					commit, err := commits.Next()
-					if err != nil {
-						break
-					}
-					log.Debug("getBranchAndCommitFromHash does branches match", "tagHash", hash.String(), "commitHash", commit.Hash.String())
-					if commit.Hash.String() == hash.String() {
-						parts := strings.Split(ref.Name().String(), "/")
-						ws = parts[len(parts)-1]
-						tagCommit = commit
-						return storer.ErrStop // stops the iterator
-					}
+				log.Debug("getBranchAndCommitFromHash does branches match", "tagHash", hash.String(), "commitHash", commit.Hash.String())
+				if commit.Hash.String() == hash.String() {
+					parts := strings.Split(ref.Name().String(), "/")
+					ws = parts[len(parts)-1]
+					tagCommit = commit
+					return storer.ErrStop // stops the iterator
 				}
 			}
 		}

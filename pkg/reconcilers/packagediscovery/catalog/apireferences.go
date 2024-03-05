@@ -23,7 +23,6 @@ import (
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/kform/pkg/recorder"
 	"github.com/kform-dev/kform/pkg/recorder/diag"
-	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	apiv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -53,7 +52,7 @@ func newAPIreferences(recorder recorder.Recorder[diag.Diagnostic]) *apiReference
 	}
 }
 
-func (r apiReferences) gatherAPIs(ctx context.Context, cr *pkgv1alpha1.PackageRevision, outputs []any) {
+func (r apiReferences) gatherAPIs(ctx context.Context, outputs []any) {
 	for _, krmResource := range outputs {
 		//get apiVersion and kind from krmResource
 		apiVersion, kind := getApiVersionKind(krmResource)
@@ -101,12 +100,12 @@ func (r *apiReferences) gatherAPIfromCRD(ctx context.Context, krmResource any) e
 	}
 	// insert a wildcard for rbac resolution -> too dangerous as it leads to unpreditable results
 	/*
-	r.refs.Insert(gvkr{
-		group:    crd.Spec.Group,
-		version:  "*",
-		kind:     "*",
-		resource: "*",s
-	})
+		r.refs.Insert(gvkr{
+			group:    crd.Spec.Group,
+			version:  "*",
+			kind:     "*",
+			resource: "*",s
+		})
 	*/
 	return nil
 }
@@ -131,12 +130,12 @@ func (r *apiReferences) gatherAPIfromAPIService(ctx context.Context, krmResource
 	})
 	// insert a wildcard for rbac resolution -> too dangerous as it leads to unpreditable results
 	/*
-	r.refs.Insert(gvkr{
-		group:    apiService.Spec.Group,
-		version:  "*",
-		kind:     "*",
-		resource: "*",
-	})
+		r.refs.Insert(gvkr{
+			group:    apiService.Spec.Group,
+			version:  "*",
+			kind:     "*",
+			resource: "*",
+		})
 	*/
 	return nil
 }

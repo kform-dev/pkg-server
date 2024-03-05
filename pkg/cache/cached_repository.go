@@ -96,7 +96,7 @@ func (r *CachedRepository) reconcileCache(ctx context.Context) error {
 		log.Debug("reconcile repo", "finished", time.Since(start).Seconds())
 	}()
 
-	discoveredPkgRevs, err := r.repo.ListPackageRevisions(ctx)
+	discoveredPkgRevs, err := r.repo.ListPackageRevisions(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -157,4 +157,18 @@ func (r *CachedRepository) DeletePackageRevision(ctx context.Context, pkgRev *pk
 	defer span.End()
 
 	return r.repo.DeletePackageRevision(ctx, pkgRev)
+}
+
+func (r *CachedRepository) ListPackageRevisions(ctx context.Context, opts *repository.ListOption) ([]*pkgv1alpha1.PackageRevision, error) {
+	ctx, span := tracer.Start(ctx, "cache::ListPackageRevisions", trace.WithAttributes())
+	defer span.End()
+
+	return r.repo.ListPackageRevisions(ctx, opts)
+}
+
+func (r *CachedRepository) EnsurePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) error {
+	ctx, span := tracer.Start(ctx, "cache::ListPackageRevisions", trace.WithAttributes())
+	defer span.End()
+
+	return r.repo.EnsurePackageRevision(ctx, pkgRev)
 }

@@ -20,15 +20,22 @@ import (
 	"context"
 
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
+	"github.com/kform-dev/pkg-server/apis/pkgid"
 )
+
+type ListOption struct {
+	PackageID *pkgid.PackageID
+}
 
 type Repository interface {
 	// used for discovery
-	ListPackageRevisions(ctx context.Context) ([]*pkgv1alpha1.PackageRevision, error)
+	ListPackageRevisions(ctx context.Context, opts *ListOption) ([]*pkgv1alpha1.PackageRevision, error)
 	// UpsertPackageRevision updates the package revision in the revision backend
 	UpsertPackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, resources map[string]string) error
 	// DeletePackageRevision deletes the package revision in the revision backend
 	DeletePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) error
 	// used for List or Gte PackageRevisionResources
 	GetResources(ctx context.Context, pr *pkgv1alpha1.PackageRevision) (map[string]string, error)
+	// ensure packageRevision ensure the Packagerevision tag exists on the package revision
+	EnsurePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) error
 }

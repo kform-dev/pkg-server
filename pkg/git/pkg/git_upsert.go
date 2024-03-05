@@ -31,6 +31,20 @@ import (
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 )
 
+func (r *gitRepository) EnsurePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) error {
+	log := log.FromContext(ctx)
+	log.Debug("EnsurePackageRevision")
+
+	// saftey sync with the repo
+	if err := r.repo.FetchRemoteRepository(ctx); err != nil {
+		return err
+	}
+	if pkgRev.Spec.Lifecycle == pkgv1alpha1.PackageRevisionLifecyclePublished && pkgRev.Spec.PackageID.Revision != "" {
+		return r.pushTag(ctx, pkgRev)
+	}
+	return fmt.Errorf("EnsurePackageRevision should only be used for published packages with a revision")
+}
+
 func (r *gitRepository) UpsertPackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, resources map[string]string) error {
 	log := log.FromContext(ctx)
 
@@ -50,7 +64,7 @@ func (r *gitRepository) UpsertPackageRevision(ctx context.Context, pkgRev *pkgv1
 			}
 		} else {
 			// allocated a revision
-			newRev, err := r.getNextRevision(ctx, pkgRev)
+			newRev, err := r.getNextRevision(pkgRev)
 			if err != nil {
 				return err
 			}

@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func getOutput(ctx context.Context, path string) ([]any, error) {
+func getOutput(path string) ([]any, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func TestCatalogAPIStoreUpdateAPIsFromPkgRev(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
-			outputs, err := getOutput(ctx, tc.path)
+			outputs, err := getOutput(tc.path)
 			if err != nil {
 				t.Errorf("cannot get output resources, unexpected error\n%s", err.Error())
 			}

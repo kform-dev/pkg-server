@@ -19,7 +19,6 @@ package packagescheduler
 import (
 	"github.com/henderiw/apiserver-store/pkg/storebackend"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
-	"github.com/kform-dev/pkg-server/apis/pkgid"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -32,6 +31,7 @@ func getkeyFromPkgRev(cr *pkgv1alpha1.PackageRevision) storebackend.Key {
 	)
 }
 
+/*
 func getkeyFromDownStream(downstream *pkgid.Downstream) storebackend.Key {
 	return storebackend.KeyFromNSN(
 		types.NamespacedName{
@@ -40,3 +40,4 @@ func getkeyFromDownStream(downstream *pkgid.Downstream) storebackend.Key {
 		},
 	)
 }
+*/

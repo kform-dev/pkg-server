@@ -88,6 +88,8 @@ func newCommitHelper(ctx context.Context, repo *gitRepository, parentCommitHash 
 // initializeTrees initializes the tree context in the commitHelper.
 // It initialized the ancestor trees of the package.
 func (r *commitHelper) initializeTrees(ctx context.Context, rootTree *object.Tree, packagePath string, packageTreeHash plumbing.Hash) error {
+	log := log.FromContext(ctx)
+	log.Debug("initializeTrees")
 	r.trees = map[string]*object.Tree{
 		"": rootTree,
 	}
@@ -292,6 +294,8 @@ func (r *commitHelper) storeTree(tree *object.Tree) (plumbing.Hash, error) {
 
 // commit stores all changes in git and creates a commit object.
 func (r *commitHelper) commit(ctx context.Context, message string, pkgPath string, additionalParentCommits ...plumbing.Hash) (commit, pkgTree plumbing.Hash, err error) {
+	log := log.FromContext(ctx)
+	log.Debug("commit")
 	rootTreeHash, err := r.storeTrees("")
 	if err != nil {
 		return plumbing.ZeroHash, plumbing.ZeroHash, err

@@ -455,6 +455,8 @@ func (r *reconciler) isPkgRevRecursivelyresolved(ctx context.Context, pkgRev *pk
 }
 
 func buildPackageVariant(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, upstream *pkgid.Upstream) *configv1alpha1.PackageVariant {
+	log := log.FromContext(ctx)
+	log.Debug("buildPackageVariant")
 	return configv1alpha1.BuildPackageVariant(
 		metav1.ObjectMeta{
 			Namespace: pkgRev.Namespace,
@@ -486,6 +488,8 @@ func buildPackageVariant(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevisio
 }
 
 func buildPackageRevision(ctx context.Context, pkgVar *configv1alpha1.PackageVariant) (*pkgv1alpha1.PackageRevision, error) {
+	log := log.FromContext(ctx)
+	log.Debug("buildPackageRevision")
 	hash, err := pkgVar.Spec.CalculateHash()
 	if err != nil {
 		return nil, err

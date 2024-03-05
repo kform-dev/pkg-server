@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -135,15 +136,34 @@ func (r *packageList) discoverPackages(ctx context.Context, tree *object.Tree, c
 }
 
 // buildGitDiscoveredPackageRevision creates a gitPackageRevision for the packageListEntry
-func (r *packageListEntry) buildGitDiscoveredPackageRevision(ctx context.Context, revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
+func (r *packageListEntry) buildPackageRevision(revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
 	repo := r.parent.parent
-	pkgID := pkgid.PackageID{
-		Target:     pkgid.PkgTarget_Catalog,
-		Repository: repo.cr.Name,
-		Realm:      filepath.Dir(r.path),
-		Package:    filepath.Base(r.path),
-		Revision:   revision,
-		Workspace:  ws,
+
+	annotations := map[string]string{}
+	var pkgID pkgid.PackageID
+	if strings.HasPrefix(r.path, pkgid.PkgTarget_Catalog) {
+		pkgID = pkgid.PackageID{
+			Target:     pkgid.PkgTarget_Catalog,
+			Repository: repo.cr.Name,
+			Realm:      filepath.Dir(r.path),
+			Package:    filepath.Base(r.path),
+			Revision:   revision,
+			Workspace:  ws,
+		}
+		annotations[pkgv1alpha1.DiscoveredPkgRevKey] = "true"
+	} else {
+		parts := strings.Split(r.path, "/")
+		if len(parts) < 2 {
+			return nil
+		}
+		pkgID = pkgid.PackageID{
+			Target:     parts[0],
+			Repository: repo.cr.Name,
+			Realm:      filepath.Join(parts[1 : len(parts)-2]...),
+			Package:    parts[len(parts)-1],
+			Revision:   revision,
+			Workspace:  ws,
+		}
 	}
 
 	pkgrev := &pkgv1alpha1.PackageRevision{
@@ -152,21 +172,12 @@ func (r *packageListEntry) buildGitDiscoveredPackageRevision(ctx context.Context
 			Kind:       pkgv1alpha1.PackageRevisionKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: repo.cr.Namespace,
-			Name:      pkgID.PkgRevString(),
-			Annotations: map[string]string{
-				pkgv1alpha1.DiscoveredPkgRevKey: "true",
-			},
+			Namespace:   repo.cr.Namespace,
+			Name:        pkgID.PkgRevString(),
+			Annotations: annotations,
 		},
 		Spec: pkgv1alpha1.PackageRevisionSpec{
-			PackageID: pkgid.PackageID{
-				Target:     pkgid.PkgTarget_Catalog,
-				Repository: repo.cr.Name,
-				Realm:      filepath.Dir(r.path),
-				Package:    filepath.Base(r.path),
-				Revision:   revision,
-				Workspace:  ws,
-			},
+			PackageID: pkgID,
 			Lifecycle: pkgv1alpha1.PackageRevisionLifecyclePublished,
 		},
 		Status: pkgv1alpha1.PackageRevisionStatus{

@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/henderiw/logger/log"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	"golang.org/x/mod/semver"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -54,7 +54,7 @@ func (r *gitRepository) getLatestRevision(ctx context.Context, pkgRev *pkgv1alph
 	return LatestRevisionNumber(pkgTags), nil
 }
 
-func (r *gitRepository) getNextRevision(ctx context.Context, pkgrev *pkgv1alpha1.PackageRevision) (string, error) {
+func (r *gitRepository) getNextRevision(pkgrev *pkgv1alpha1.PackageRevision) (string, error) {
 	tags, err := r.repo.Repo.Tags()
 	if err != nil {
 		return "", err

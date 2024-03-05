@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func getResources(ctx context.Context, paths []string) ([]any, error) {
+func getResources(paths []string) ([]any, error) {
 	resources := []any{}
 	for _, path := range paths {
 		b, err := os.ReadFile(path)
@@ -77,7 +77,7 @@ func TestDependencyResolve(t *testing.T) {
 
 	for name, tc := range cases {
 		ctx := context.Background()
-		resources, err := getResources(ctx, tc.paths)
+		resources, err := getResources(tc.paths)
 		if err != nil {
 			t.Errorf("cannot get resources, unexpected error\n%s", err.Error())
 		}
