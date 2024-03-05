@@ -210,30 +210,36 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 				repoPkgRevs, err := cachedRepo.ListPackageRevisions(ctx, &repository.ListOption{PackageID: &cr.Spec.PackageID})
 				if err != nil {
-					//log.Error("cannot get repository", "error", err)
+					log.Error("cannot list repo pkgrevs", "error", err.Error())
 					cr.SetConditions(condition.Failed(err.Error()))
 					r.recorder.Eventf(cr, corev1.EventTypeWarning,
 						"Error", "error %s", err.Error())
 					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
+				log.Info("published repo packages", "total", len(repoPkgRevs))
+
 				opts := []client.ListOption{
 					client.InNamespace(cr.Namespace),
 					client.MatchingFields{"spec.packageID.package": cr.Spec.PackageID.Package},
 				}
 				storedPkgRevs := &pkgv1alpha1.PackageRevisionList{}
 				if err := r.List(ctx, storedPkgRevs, opts...); err != nil {
+					log.Error("cannot list stored pkgrevs", "error", err.Error())
 					cr.SetConditions(condition.Failed(err.Error()))
 					r.recorder.Eventf(cr, corev1.EventTypeWarning,
 						"Error", "error %s", err.Error())
 					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
+				log.Info("published stored packages", "total", storedPkgRevs.Items)
 
 				allocatedRevisions := sets.New[string]()
 				for _, pkgRev := range repoPkgRevs {
 					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+					log.Info("published repo packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
 				}
 				for _, pkgRev := range storedPkgRevs.Items {
 					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+					log.Info("published stored packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
 				}
 				nextRev, err := pkgid.NextRevisionNumber(allocatedRevisions.UnsortedList())
 				if err != nil {
@@ -242,6 +248,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						"Error", "error %s", err.Error())
 					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
+				log.Info("published package", "nextRev", nextRev)
 				cr.Spec.PackageID.Revision = nextRev
 				if err := r.Update(ctx, cr); err != nil {
 					//log.Error("cannot update packagerevision", "error", err)
