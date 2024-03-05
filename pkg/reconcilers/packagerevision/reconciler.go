@@ -234,10 +234,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 				allocatedRevisions := sets.New[string]()
 				for _, pkgRev := range repoPkgRevs {
-					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+					pkgRev := pkgRev
+					if pkgRev.Spec.PackageID.Repository == cr.Spec.PackageID.Repository &&
+						pkgRev.Spec.PackageID.Target == cr.Spec.PackageID.Target &&
+						pkgRev.Spec.PackageID.Realm == cr.Spec.PackageID.Realm &&
+						pkgRev.Spec.PackageID.Package == cr.Spec.PackageID.Package {
+						if pkgRev.Spec.PackageID.Revision != "" {
+							allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
 					log.Info("published repo packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
+						}
+					
 				}
 				for _, pkgRev := range storedPkgRevs.Items {
+					pkgRev := pkgRev
 					if pkgRev.Spec.PackageID.Repository == cr.Spec.PackageID.Repository &&
 						pkgRev.Spec.PackageID.Target == cr.Spec.PackageID.Target &&
 						pkgRev.Spec.PackageID.Realm == cr.Spec.PackageID.Realm &&

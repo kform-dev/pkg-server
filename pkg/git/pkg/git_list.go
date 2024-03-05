@@ -77,7 +77,7 @@ func IsFiltered(refName plumbing.ReferenceName, opt *repository.ListOption) bool
 		if strings.Contains(refName.String(), opt.PackageID.Path()) {
 			filter = false
 		} else {
-			filter = false
+			filter = true
 		}
 	}
 	return filter
