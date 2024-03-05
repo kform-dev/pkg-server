@@ -313,6 +313,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 					}
 				*/
+				}
 			}
 			// ensure Tag for pkgRev in deployments
 			if deployment {
