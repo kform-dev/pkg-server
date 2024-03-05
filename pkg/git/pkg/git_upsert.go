@@ -290,10 +290,14 @@ func (r *gitRepository) pushTag(ctx context.Context, pkgRev *pkgv1alpha1.Package
 		},
 		Message: string(pkgTagName),
 	})
-	if !strings.Contains(err.Error(), "tag already exists") {
-		log.Error("cannot create tag", "error", err)
-		return err
+	if err != nil {
+		if !strings.Contains(err.Error(), "tag already exists") {
+			log.Error("cannot create tag", "error", err)
+			return err
+		}
+		return nil
 	}
+
 	log.Info("create tag local", "tagRef", pkgTagName.TagInLocal().String(), "tagRef", string(pkgTagName))
 	// push the tag
 	refSpecs := newPushRefSpecBuilder()
