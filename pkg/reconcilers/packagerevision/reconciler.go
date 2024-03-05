@@ -230,7 +230,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						"Error", "error %s", err.Error())
 					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
-				log.Info("published stored packages", "total", storedPkgRevs.Items)
+				log.Info("published stored packages", "total", len(storedPkgRevs.Items))
 
 				allocatedRevisions := sets.New[string]()
 				for _, pkgRev := range repoPkgRevs {
@@ -241,9 +241,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						pkgRev.Spec.PackageID.Package == cr.Spec.PackageID.Package {
 						if pkgRev.Spec.PackageID.Revision != "" {
 							allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
-					log.Info("published repo packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
+							log.Info("published repo packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
 						}
-					
+
+					}
 				}
 				for _, pkgRev := range storedPkgRevs.Items {
 					pkgRev := pkgRev
@@ -313,7 +314,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 					}
 				*/
-				}
 			}
 			// ensure Tag for pkgRev in deployments
 			if deployment {
