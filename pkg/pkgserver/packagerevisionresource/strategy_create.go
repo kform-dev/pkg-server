@@ -81,7 +81,7 @@ func (r *strategy) Create(ctx context.Context, key types.NamespacedName, obj run
 			return obj, err
 		}
 	}
-
+	log.Info("prr resource added", "name", pkgRevResources.Name, "resources", len(pkgRevResources.Spec.Resources))
 	r.notifyWatcher(ctx, watch.Event{
 		Type:   watch.Added,
 		Object: obj,
