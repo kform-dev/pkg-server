@@ -220,7 +220,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 				opts := []client.ListOption{
 					client.InNamespace(cr.Namespace),
-					client.MatchingFields{"spec.packageID.package": cr.Spec.PackageID.Package},
+					//client.MatchingFields{"spec.packageID.package": cr.Spec.PackageID.Package},
 				}
 				storedPkgRevs := &pkgv1alpha1.PackageRevisionList{}
 				if err := r.List(ctx, storedPkgRevs, opts...); err != nil {
@@ -238,8 +238,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					log.Info("published repo packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
 				}
 				for _, pkgRev := range storedPkgRevs.Items {
-					allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
-					log.Info("published stored packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
+					if pkgRev.Spec.PackageID.Repository == cr.Spec.PackageID.Repository &&
+						pkgRev.Spec.PackageID.Target == cr.Spec.PackageID.Target &&
+						pkgRev.Spec.PackageID.Realm == cr.Spec.PackageID.Realm &&
+						pkgRev.Spec.PackageID.Package == cr.Spec.PackageID.Package {
+						if pkgRev.Spec.PackageID.Revision != "" {
+							allocatedRevisions.Insert(pkgRev.Spec.PackageID.Revision)
+							log.Info("published stored packages", "name", pkgRev.Name, "revision", pkgRev.Spec.PackageID.Revision)
+						}
+					}
 				}
 				nextRev, err := pkgid.NextRevisionNumber(allocatedRevisions.UnsortedList())
 				if err != nil {
