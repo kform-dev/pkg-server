@@ -136,12 +136,14 @@ func (r *packageList) discoverPackages(ctx context.Context, tree *object.Tree, c
 }
 
 // buildGitDiscoveredPackageRevision creates a gitPackageRevision for the packageListEntry
-func (r *packageListEntry) buildPackageRevision(catalog bool, revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
+func (r *packageListEntry) buildPackageRevision(ctx context.Context, deployment bool, revision, ws string, commit *object.Commit) *pkgv1alpha1.PackageRevision {
+	log := log.FromContext(ctx)
+	log.Info("buildPackageRevision", "deployment", deployment, "revision", revision, "workspace", ws, "packagepach", r.path)
 	repo := r.parent.parent
 
 	annotations := map[string]string{}
 	var pkgID pkgid.PackageID
-	if catalog {
+	if !deployment {
 		pkgID = pkgid.PackageID{
 			Target:     pkgid.PkgTarget_Catalog,
 			Repository: repo.cr.Name,

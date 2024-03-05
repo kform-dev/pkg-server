@@ -197,7 +197,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if len(cr.Spec.Tasks) == 0 {
 		if cr.Spec.Lifecycle == pkgv1alpha1.PackageRevisionLifecyclePublished {
-			cachedRepo, err := r.getRepo(ctx, cr)
+			deployment, cachedRepo, err := r.getRepo(ctx, cr)
 			if err != nil {
 				//log.Error("cannot get repository", "error", err)
 				cr.SetConditions(condition.Failed(err.Error()))
@@ -291,14 +291,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					}
 				*/
 			}
-			// ensure Tag
-			if err := cachedRepo.EnsurePackageRevision(ctx, cr); err != nil {
-				cr.SetConditions(condition.Failed(err.Error()))
-				r.recorder.Eventf(cr, corev1.EventTypeWarning,
-					"Error", "error %s", err.Error())
-				return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+			// ensure Tag for pkgRev in deployments
+			if deployment {
+				if err := cachedRepo.EnsurePackageRevision(ctx, cr); err != nil {
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
 			}
-
 		}
 	} else {
 		// only act if the ready condition was not true
@@ -445,7 +446,7 @@ func (r *reconciler) getResources(ctx context.Context, cr *pkgv1alpha1.PackageRe
 	*/
 }
 
-func (r *reconciler) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (*cache.CachedRepository, error) {
+func (r *reconciler) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (bool, *cache.CachedRepository, error) {
 	log := log.FromContext(ctx)
 	repokey := types.NamespacedName{
 		Namespace: cr.Namespace,
@@ -454,8 +455,8 @@ func (r *reconciler) getRepo(ctx context.Context, cr *pkgv1alpha1.PackageRevisio
 	repo := &configv1alpha1.Repository{}
 	if err := r.Get(ctx, repokey, repo); err != nil {
 		log.Error("cannot get repo", "error", err)
-		return nil, err
+		return false, nil, err
 	}
-
-	return r.repoCache.Open(ctx, repo)
+	cachedRepo, err := r.repoCache.Open(ctx, repo)
+	return repo.Spec.Deployment, cachedRepo, err
 }
