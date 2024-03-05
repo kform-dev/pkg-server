@@ -111,6 +111,7 @@ func (r *CachedRepository) reconcileCache(ctx context.Context) error {
 		if err := r.client.Get(ctx, key, &pkgv1alpha1.PackageRevision{}); err != nil {
 			if err := r.client.Create(ctx, discoveredPkgRev); err != nil {
 				log.Error("cannot create package revision", "key", key.String(), "error", err)
+				continue
 			}
 
 			// create also a PkgRevResources to keep
