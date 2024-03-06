@@ -311,7 +311,7 @@ func (r *dependencyResolver) gatherDependencyfromResource(ctx context.Context, g
 }
 
 func (r *dependencyResolver) addDependency(gvk schema.GroupVersionKind, api *API) {
-	fmt.Println("addDependency", gvk.String(), api.Type.String(), api)
+	//fmt.Println("addDependency", gvk.String(), api.Type.String(), api)
 	if api.Type == APIType_Core {
 		r.dependency.AddCoreDependency(gvk)
 		return
