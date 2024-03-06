@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/henderiw/logger/log"
+	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned"
 	"github.com/kform-dev/pkg-server/pkg/cache"
 	"github.com/kform-dev/pkg-server/pkg/reconcilers/packagediscovery/catalog"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +29,7 @@ import (
 type ControllerConfig struct {
 	RepoCache    *cache.Cache
 	CatalogStore *catalog.Store
+	ClientSet    *versioned.Clientset
 }
 
 func InitContext(ctx context.Context, controllerName string, req types.NamespacedName) context.Context {

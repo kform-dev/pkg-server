@@ -36,7 +36,7 @@ import (
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	koe "github.com/nephio-project/nephio/krm-functions/lib/kubeobject"
 	"github.com/pkg/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (
@@ -52,26 +52,33 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 	inputs := []any{}
 	outputs := []any{}
 
-	//log.Info("package resources listing for", "pkgRev", cr.Name, "namespace", cr.Namespace)
-	opts := []client.ListOption{}
-	pkgRevResourcesList := &pkgv1alpha1.PackageRevisionResourcesList{}
-	if err := r.List(ctx, pkgRevResourcesList, opts...); err != nil {
+	pkgRevResources, err := r.clientset.PkgV1alpha1().PackageRevisionResourceses(cr.Namespace).Get(ctx, cr.Name, v1.GetOptions{})
+	if err != nil {
 		log.Error("cannot list package resources", "error", err.Error())
 		return packages, resources, inputs, outputs, err
 	}
-	var pkgRevResources *pkgv1alpha1.PackageRevisionResources
-	for _, pkgRevRes := range pkgRevResourcesList.Items {
-		pkgRevRes := pkgRevRes
-		//log.Info("package resources from list", "pkgRev", pkgRevRes.Name)
-		if pkgRevRes.Name == cr.Name && pkgRevRes.Namespace == cr.Namespace {
-			pkgRevResources = &pkgRevRes
-			break
+	//log.Info("package resources listing for", "pkgRev", cr.Name, "namespace", cr.Namespace)
+	/*
+		opts := []client.ListOption{}
+		pkgRevResourcesList := &pkgv1alpha1.PackageRevisionResourcesList{}
+		if err := r.List(ctx, pkgRevResourcesList, opts...); err != nil {
+			log.Error("cannot list package resources", "error", err.Error())
+			return packages, resources, inputs, outputs, err
 		}
-	}
-	if pkgRevResources == nil || pkgRevResources.Spec.Resources == nil {
-		log.Error("cannot get package resources", "key", cr.Name)
-		return packages, resources, inputs, outputs, fmt.Errorf("cannot get package revision resources for: %s", cr.Name)
-	}
+		var pkgRevResources *pkgv1alpha1.PackageRevisionResources
+		for _, pkgRevRes := range pkgRevResourcesList.Items {
+			pkgRevRes := pkgRevRes
+			//log.Info("package resources from list", "pkgRev", pkgRevRes.Name)
+			if pkgRevRes.Name == cr.Name && pkgRevRes.Namespace == cr.Namespace {
+				pkgRevResources = &pkgRevRes
+				break
+			}
+		}
+		if pkgRevResources == nil || pkgRevResources.Spec.Resources == nil {
+			log.Error("cannot get package resources", "key", cr.Name)
+			return packages, resources, inputs, outputs, fmt.Errorf("cannot get package revision resources for: %s", cr.Name)
+		}
+	*/
 
 	/*
 		pkgRevKey := types.NamespacedName{
