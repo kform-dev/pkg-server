@@ -323,6 +323,7 @@ func (r *dependencyResolver) addDependency(gvk schema.GroupVersionKind, api *API
 		Package:    api.PkgID.Package,
 		Revision:   "*",
 	}
+	fmt.Println("addDependency", gvk.String(), api.Type.String(), upstream.String())
 	r.dependency.AddPkgDependency(gvk, upstream)
 }
 
