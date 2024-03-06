@@ -36,7 +36,9 @@ import (
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	koe "github.com/nephio-project/nephio/krm-functions/lib/kubeobject"
 	"github.com/pkg/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (
@@ -91,7 +93,7 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 	}
 
 	pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
-	if err := r.Get(ctx, pkgRevKey, pkgRevResources); err != nil {
+	if err := r.Get(ctx, pkgRevKey, pkgRevResources, &client.GetOptions{Raw: &v1.GetOptions{ResourceVersion: "0"}}); err != nil {
 		log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
 		return packages, resources, inputs, outputs, err
 	}
