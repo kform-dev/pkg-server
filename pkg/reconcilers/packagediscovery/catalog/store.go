@@ -153,6 +153,7 @@ func (r *Store) UpdatePkgRevAPI(ctx context.Context, cr *pkgv1alpha1.PackageRevi
 				}
 			}
 			api.Type = APIType_Package
+			api.PkgID = cr.Spec.PackageID
 			// update an existing entry
 			if len(api.Versions) == 0 { // initialize versions if none exist
 				api.Versions = map[string][]string{}
