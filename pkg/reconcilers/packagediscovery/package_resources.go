@@ -68,7 +68,7 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 			break
 		}
 	}
-	if pkgRevResources == nil {
+	if pkgRevResources == nil || pkgRevResources.Spec.Resources == nil {
 		log.Error("cannot get package resources", "key", cr.Name)
 	}
 
