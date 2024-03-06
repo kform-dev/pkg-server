@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-const PackageRevisionResourcesPlural = "packagerevisionresources"
-const PackageRevisionResourcesSingular = "packagerevisionresource"
+const PackageRevisionResourcesPlural = "packagerevisionresourceses"
+const PackageRevisionResourcesSingular = "packagerevisionresources"
 
 var _ resource.Object = &PackageRevisionResources{}
 var _ resource.ObjectList = &PackageRevisionResourcesList{}
