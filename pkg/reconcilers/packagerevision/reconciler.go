@@ -398,43 +398,69 @@ func (r *reconciler) getResources(ctx context.Context, cr *pkgv1alpha1.PackageRe
 
 	opts := []client.ListOption{
 		client.InNamespace(cr.Namespace),
+		client.MatchingFields{
+			"spec.packageID.repository": upstream.Repository,
+			"spec.packageID.realm":      upstream.Realm,
+			"spec.packageID.package":    upstream.Package,
+			"spec.packageID.revision":   upstream.Revision,
+		},
 	}
-	pkgRevList := &pkgv1alpha1.PackageRevisionList{}
+	pkgRevList := &pkgv1alpha1.PackageRevisionResourcesList{}
 	if err := r.List(ctx, pkgRevList, opts...); err != nil {
 		log.Error("cannot get pkgRev, list failed", "error", err.Error())
 		return nil, err
 	}
-	var upstreamPkgRev *pkgv1alpha1.PackageRevision
-	for _, pkgRev := range pkgRevList.Items {
-		pkgRev := pkgRev
-		if pkgRev.Spec.PackageID.Target == pkgid.PkgTarget_Catalog &&
-			pkgRev.Spec.PackageID.Repository == upstream.Repository &&
-			pkgRev.Spec.PackageID.Realm == upstream.Realm &&
-			pkgRev.Spec.PackageID.Package == upstream.Package &&
-			pkgRev.Spec.PackageID.Revision == upstream.Revision {
-			// found
-			upstreamPkgRev = &pkgRev
-			break
-		}
-	}
-	if upstreamPkgRev == nil {
+	if len(pkgRevList.Items) != 1 {
+		log.Error("cannot find upstream packageresources", "error", pkgRevList.Items)
 		return nil, fmt.Errorf("cannot find upstream packageresources: %s", upstream.String())
 	}
-	key := types.NamespacedName{
-		Namespace: upstreamPkgRev.Namespace,
-		Name:      upstreamPkgRev.Name,
-	}
-	log.Info("getResources", "pkgRevResoureKey", key.String())
-	pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
-	if err := r.Get(ctx, key, pkgRevResources); err != nil {
-		log.Error("cannot get pkgRevResources, get failed", "error", err.Error())
-		return nil, err
-	}
+	pkgRevResources := &pkgRevList.Items[0]
 	for key := range pkgRevResources.Spec.Resources {
 		log.Info("getResources", "key", key)
 	}
 	return pkgRevResources.Spec.Resources, nil
 
+	/*
+		opts := []client.ListOption{
+			client.InNamespace(cr.Namespace),
+		}
+		pkgRevList := &pkgv1alpha1.PackageRevisionList{}
+		if err := r.List(ctx, pkgRevList, opts...); err != nil {
+			log.Error("cannot get pkgRev, list failed", "error", err.Error())
+			return nil, err
+		}
+		var upstreamPkgRev *pkgv1alpha1.PackageRevision
+		for _, pkgRev := range pkgRevList.Items {
+			pkgRev := pkgRev
+			if pkgRev.Spec.PackageID.Target == pkgid.PkgTarget_Catalog &&
+				pkgRev.Spec.PackageID.Repository == upstream.Repository &&
+				pkgRev.Spec.PackageID.Realm == upstream.Realm &&
+				pkgRev.Spec.PackageID.Package == upstream.Package &&
+				pkgRev.Spec.PackageID.Revision == upstream.Revision {
+				// found
+				upstreamPkgRev = &pkgRev
+				break
+			}
+		}
+		if upstreamPkgRev == nil {
+			return nil, fmt.Errorf("cannot find upstream packageresources: %s", upstream.String())
+		}
+		key := types.NamespacedName{
+			Namespace: upstreamPkgRev.Namespace,
+			Name:      upstreamPkgRev.Name,
+		}
+		log.Info("getResources", "pkgRevResoureKey", key.String())
+		pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
+		if err := r.Get(ctx, key, pkgRevResources); err != nil {
+			log.Error("cannot get pkgRevResources, get failed", "error", err.Error())
+			return nil, err
+		}
+		for key := range pkgRevResources.Spec.Resources {
+			log.Info("getResources", "key", key)
+		}
+		return pkgRevResources.Spec.Resources, nil
+	*/
+	// attempt 2
 	/*
 		srcrepoKey := types.NamespacedName{
 			Name:      upstream.Repository,

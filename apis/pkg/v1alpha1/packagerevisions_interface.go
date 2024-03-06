@@ -232,7 +232,7 @@ func ConvertPackageRevisionsFieldSelector(label, value string) (internalLabel, i
 		return label, value, nil
 	case "metadata.namespace":
 		return label, value, nil
-	case "spec.packageID.revision", "spec.packageID.realm", "spec.packageID.package", "spec.packageID.target", "spec.packageID.repository", "spec.packageID.workspace", "spec.lifecycle":
+	case "spec.packageID.target", "spec.packageID.repository", "spec.packageID.realm", "spec.packageID.package", "spec.packageID.workspace", "spec.packageID.revision", "spec.lifecycle":
 		return label, value, nil
 	default:
 		return "", "", fmt.Errorf("%q is not a known field selector", label)

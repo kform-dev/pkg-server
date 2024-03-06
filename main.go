@@ -11,7 +11,6 @@ import (
 	"github.com/henderiw/apiserver-builder/pkg/builder"
 	"github.com/henderiw/logger/log"
 	configv1alpha1 "github.com/kform-dev/pkg-server/apis/config/v1alpha1"
-	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned"
 	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned/scheme"
 	pkgopenapi "github.com/kform-dev/pkg-server/apis/generated/openapi"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
@@ -81,16 +80,14 @@ func main() {
 		},
 		pkgv1alpha1.ConvertPackageRevisionsFieldSelector,
 	)
-	/*
-		runScheme.AddFieldLabelConversionFunc(
-			schema.GroupVersionKind{
-				Group:   pkgv1alpha1.Group,
-				Version: pkgv1alpha1.Version,
-				Kind:    pkgv1alpha1.PackageRevisionResourcesKind,
-			},
-			pkgv1alpha1.ConvertPackageRevisionResourcesFieldSelector,
-		)
-	*/
+	runScheme.AddFieldLabelConversionFunc(
+		schema.GroupVersionKind{
+			Group:   pkgv1alpha1.Group,
+			Version: pkgv1alpha1.Version,
+			Kind:    pkgv1alpha1.PackageRevisionResourcesKind,
+		},
+		pkgv1alpha1.ConvertPackageRevisionResourcesFieldSelector,
+	)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: runScheme,
@@ -101,10 +98,10 @@ func main() {
 	}
 
 	/*
-	clientset, err := versioned.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		panic(err.Error())
-	}
+		clientset, err := versioned.NewForConfig(mgr.GetConfig())
+		if err != nil {
+			panic(err.Error())
+		}
 	*/
 
 	cache := cache.NewCache(cacheDir, 1*time.Minute, cache.Options{
