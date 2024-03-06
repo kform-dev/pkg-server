@@ -62,7 +62,7 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 	var pkgRevResources *pkgv1alpha1.PackageRevisionResources
 	for _, pkgRevRes := range pkgRevResourcesList.Items {
 		pkgRevRes := pkgRevRes
-		log.Info("package resources from list", "pkgRev", pkgRevResources.Name)
+		log.Info("package resources from list", "pkgRev", pkgRevRes.Name)
 		if pkgRevRes.Name == cr.Name && pkgRevRes.Namespace == cr.Namespace {
 			pkgRevResources = &pkgRevRes
 			break
