@@ -81,6 +81,7 @@ func main() {
 		},
 		pkgv1alpha1.ConvertPackageRevisionsFieldSelector,
 	)
+	/*
 	runScheme.AddFieldLabelConversionFunc(
 		schema.GroupVersionKind{
 			Group:   pkgv1alpha1.Group,
@@ -89,6 +90,7 @@ func main() {
 		},
 		pkgv1alpha1.ConvertPackageRevisionResourcesFieldSelector,
 	)
+	*/
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: runScheme,
