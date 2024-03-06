@@ -74,6 +74,7 @@ func newDependencyResolver(recorder recorder.Recorder[diag.Diagnostic], catalogA
 // -> create an upstream package dependency
 func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, resources []any) *Dependency {
 	log := log.FromContext(ctx)
+	log.Debug("resolve")
 	// input resource can identify a dependency via the claimv1alpha1.PackageDependency
 	// if so we capture this
 	for _, krmResource := range inputs {
@@ -104,7 +105,7 @@ func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, reso
 			r.recorder.Record(diag.DiagFromErr(err))
 			continue
 		}
-		log.Info("resolve", "gvk", gv.WithKind(kind).String())
+		//log.Info("resolve", "gvk", gv.WithKind(kind).String())
 		switch {
 		case apiVersion == rbacv1.SchemeGroupVersion.String() && kind == reflect.TypeOf(rbacv1.ClusterRole{}).Name():
 			// get rbac information
@@ -173,7 +174,7 @@ func (r *dependencyResolver) gatherDependencyfromClusterRole(ctx context.Context
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
 	// add the dependency for the rbac clusterrole resource
-	api.PkgID = *api.PkgID.DeepCopy()
+	//api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 	// add the policy rules dependencies
 	return r.addPolicyRuleDependencies(ctx, gvk, clusterRole.Rules)
@@ -199,7 +200,7 @@ func (r *dependencyResolver) gatherDependencyfromRole(ctx context.Context, gvk s
 	if _, ok := api.Versions[gvk.Version]; !ok {
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
-	api.PkgID = *api.PkgID.DeepCopy()
+	//api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 
 	return r.addPolicyRuleDependencies(ctx, gvk, role.Rules)
@@ -235,7 +236,7 @@ func (r *dependencyResolver) addPolicyRuleDependencies(ctx context.Context, gvk 
 					Version: "*",
 					Kind:    kind,
 				}
-				api.PkgID = *api.PkgID.DeepCopy()
+				//api.PkgID = *api.PkgID.DeepCopy()
 				if api.PkgID.PkgString() != r.dependency.PkgString() {
 					r.addDependency(gvk, api)
 				}
@@ -304,12 +305,13 @@ func (r *dependencyResolver) gatherDependencyfromResource(ctx context.Context, g
 	if _, ok := api.Versions[gvk.Version]; !ok {
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
-	api.PkgID = *api.PkgID.DeepCopy()
+	//api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 	return nil
 }
 
 func (r *dependencyResolver) addDependency(gvk schema.GroupVersionKind, api *API) {
+	fmt.Println("addDependency", gvk.String(), api.Type.String(), api)
 	if api.Type == APIType_Core {
 		r.dependency.AddCoreDependency(gvk)
 		return
