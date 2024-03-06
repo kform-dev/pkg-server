@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -151,13 +152,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 	}
 
+	/*
+		pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
+		if err := r.Get(ctx, pkgRevKey, pkgRevResources); err != nil {
+			log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
+			return packages, resources, inputs, outputs, err
+		}
+	*/
+
 	// process resource data
 	// run kform
 	// determine error
 	// create output
 	if cr.GetCondition(controllerCondition).Status == metav1.ConditionFalse {
 		pkgrevResources := &pkgv1alpha1.PackageRevisionResources{}
-		if err := r.Get(ctx, key, pkgrevResources); err != nil {
+		if err := r.Get(ctx, key, pkgrevResources, &client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: "0"}}); err != nil {
 			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
 				controllerEvent, "error %s", err.Error())
