@@ -300,6 +300,7 @@ func (r *dependencyResolver) gatherDependencyfromResource(ctx context.Context, g
 	if _, ok := api.Versions[gvk.Version]; !ok {
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
+	api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 	return nil
 }
