@@ -35,6 +35,11 @@ func (r *gitRepository) GetResources(ctx context.Context, pkgRev *pkgv1alpha1.Pa
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	// saftey sync with the repo
+	if err := r.repo.FetchRemoteRepository(ctx); err != nil {
+		return nil, err
+	}
+
 	log := log.FromContext(ctx)
 	commit, err := r.getCommit(ctx, pkgRev)
 	if err != nil {
@@ -101,7 +106,7 @@ func (r *gitRepository) getCommit(ctx context.Context, pkgRev *pkgv1alpha1.Packa
 		branchRefName := workspacePackageBranchRefName(pkgRev.Spec.PackageID)
 		branchRef, err := r.repo.Repo.Reference(branchRefName, true)
 		if err != nil {
-			log.Error("cannot get commit from published package, tag ref does not exist", "branchRefName", branchRefName, "error", err)
+			log.Error("cannot get commit from package, branch does not exist", "branchRefName", branchRefName, "error", err)
 			return nil, err
 		}
 		return r.repo.Repo.CommitObject(branchRef.Hash())

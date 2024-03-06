@@ -23,11 +23,13 @@ import (
 	"sort"
 
 	"github.com/henderiw/logger/log"
+	"github.com/kform-dev/pkg-server/apis/condition"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	"github.com/kform-dev/pkg-server/apis/pkgid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,6 +69,10 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 	}
 
 	for _, pkgRev := range pkgRevs.Items {
+		if pkgRev.GetCondition(condition.ConditionTypeReady).Status == metav1.ConditionFalse {
+			// the package might not be cloned yet
+			continue
+		}
 		if filter != nil {
 			if filter.Name != "" && filter.Name != pkgRev.Name {
 				continue
