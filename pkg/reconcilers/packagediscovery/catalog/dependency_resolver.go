@@ -73,6 +73,7 @@ func newDependencyResolver(recorder recorder.Recorder[diag.Diagnostic], catalogA
 // package resources
 // -> create an upstream package dependency
 func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, resources []any) *Dependency {
+	log := log.FromContext(ctx)
 	// input resource can identify a dependency via the claimv1alpha1.PackageDependency
 	// if so we capture this
 	for _, krmResource := range inputs {
@@ -103,6 +104,7 @@ func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, reso
 			r.recorder.Record(diag.DiagFromErr(err))
 			continue
 		}
+		log.Info("resolve", "gvk", gv.WithKind(kind).String())
 		switch {
 		case apiVersion == rbacv1.SchemeGroupVersion.String() && kind == reflect.TypeOf(rbacv1.ClusterRole{}).Name():
 			// get rbac information
