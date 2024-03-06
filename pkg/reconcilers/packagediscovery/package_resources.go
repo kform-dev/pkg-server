@@ -57,6 +57,9 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 		log.Error("cannot list package resources", "error", err.Error())
 		return packages, resources, inputs, outputs, err
 	}
+	if len(pkgRevResources.Spec.Resources) != 0 {
+		log.Info("package resources", "total", len(pkgRevResources.Spec.Resources))
+	}
 	//log.Info("package resources listing for", "pkgRev", cr.Name, "namespace", cr.Namespace)
 	/*
 		opts := []client.ListOption{}

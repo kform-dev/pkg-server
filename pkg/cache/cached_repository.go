@@ -114,6 +114,7 @@ func (r *CachedRepository) reconcileCache(ctx context.Context) error {
 				continue
 			}
 
+			/*
 			// create also a PkgRevResources to keep
 			resources, err := r.GetResources(ctx, discoveredPkgRev)
 			if err != nil {
@@ -133,6 +134,7 @@ func (r *CachedRepository) reconcileCache(ctx context.Context) error {
 			if err := r.client.Create(ctx, pkgRevResources); err != nil {
 				log.Error("cannot create package revision resources", "key", key.String(), "error", err)
 			}
+			*/
 		}
 	}
 
