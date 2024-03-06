@@ -73,7 +73,7 @@ func (r *apiDiscoverer) Start(ctx context.Context) {
 			} else {
 				r.catalogStore.UpdateAPIfromAPIResources(ctx, apiResources)
 			}
-			//r.catalogStore.Print(ctx)
+			r.catalogStore.Print(ctx)
 			time.Sleep(10 * time.Second)
 		}
 	}
