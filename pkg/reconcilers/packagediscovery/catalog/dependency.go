@@ -112,7 +112,7 @@ func (r *Dependency) AddPkgDependency(gvk schema.GroupVersionKind, upstream *pkg
 	if _, ok := r.pkgDependencies[gvk]; !ok {
 		r.pkgDependencies[gvk] = sets.New[*pkgid.Upstream]()
 	}
-	r.pkgDependencies[gvk].Insert(upstream)
+	r.pkgDependencies[gvk].Insert(upstream.DeepCopy())
 }
 
 // ListPkgDependencies lists a unique set of upstream packages
