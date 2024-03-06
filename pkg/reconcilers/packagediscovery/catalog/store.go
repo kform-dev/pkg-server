@@ -225,7 +225,7 @@ func (r *Store) UpdatePkgRevDependencies(ctx context.Context, cr *pkgv1alpha1.Pa
 	}
 }
 
-func (r *Store) GetPkgRevDependencies(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (bool, []pkgid.Upstream) {
+func (r *Store) GetPkgRevDependencies(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (bool, []*pkgid.Upstream) {
 	log := log.FromContext(ctx)
 	// the catalog should be fetched using the upstream identifier in the package
 

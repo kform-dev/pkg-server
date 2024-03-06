@@ -332,6 +332,6 @@ func (r *dependencyResolver) ListCoreDependencies() []schema.GroupVersionKind {
 
 }
 
-func (r *dependencyResolver) ListGVKPkgDependencies() map[schema.GroupVersionKind][]pkgid.Upstream {
+func (r *dependencyResolver) ListGVKPkgDependencies() map[schema.GroupVersionKind][]*pkgid.Upstream {
 	return r.dependency.ListGVKPkgDependencies()
 }

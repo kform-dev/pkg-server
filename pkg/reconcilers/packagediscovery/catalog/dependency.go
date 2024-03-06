@@ -33,7 +33,7 @@ type Dependency struct {
 	resolutionErrors   map[schema.GroupVersionKind]error
 	resolutionWarnings map[schema.GroupVersionKind]error
 	pkgId              pkgid.PackageID
-	pkgDependencies    map[schema.GroupVersionKind]sets.Set[pkgid.Upstream]
+	pkgDependencies    map[schema.GroupVersionKind]sets.Set[*pkgid.Upstream]
 	resDependencies   sets.Set[schema.GroupVersionKind]
 }
 
@@ -44,7 +44,7 @@ func NewDependency(pkgID pkgid.PackageID) *Dependency {
 		resolutionErrors:   map[schema.GroupVersionKind]error{},
 		resolutionWarnings: map[schema.GroupVersionKind]error{},
 		pkgId:              pkgID,
-		pkgDependencies:    map[schema.GroupVersionKind]sets.Set[pkgid.Upstream]{},
+		pkgDependencies:    map[schema.GroupVersionKind]sets.Set[*pkgid.Upstream]{},
 		resDependencies:   sets.Set[schema.GroupVersionKind]{},
 	}
 }
@@ -110,16 +110,16 @@ func (r *Dependency) AddPkgDependency(gvk schema.GroupVersionKind, upstream *pkg
 	defer r.m.Unlock()
 
 	if _, ok := r.pkgDependencies[gvk]; !ok {
-		r.pkgDependencies[gvk] = sets.New[pkgid.Upstream]()
+		r.pkgDependencies[gvk] = sets.New[*pkgid.Upstream]()
 	}
-	r.pkgDependencies[gvk].Insert(*upstream)
+	r.pkgDependencies[gvk].Insert(upstream)
 }
 
 // ListPkgDependencies lists a unique set of upstream packages
-func (r *Dependency) ListPkgDependencies() []pkgid.Upstream {
+func (r *Dependency) ListPkgDependencies() []*pkgid.Upstream {
 	r.m.RLock()
 	defer r.m.RUnlock()
-	upstreamSet := sets.New[pkgid.Upstream]()
+	upstreamSet := sets.New[*pkgid.Upstream]()
 	for _, upstreams := range r.pkgDependencies {
 		for _, upstream := range upstreams.UnsortedList() {
 			upstreamSet.Insert(upstream)
@@ -132,10 +132,10 @@ func (r *Dependency) ListPkgDependencies() []pkgid.Upstream {
 	return upstreams
 }
 
-func (r *Dependency) ListGVKPkgDependencies() map[schema.GroupVersionKind][]pkgid.Upstream {
+func (r *Dependency) ListGVKPkgDependencies() map[schema.GroupVersionKind][]*pkgid.Upstream {
 	r.m.RLock()
 	defer r.m.RUnlock()
-	gvkPkgDeps := map[schema.GroupVersionKind][]pkgid.Upstream{}
+	gvkPkgDeps := map[schema.GroupVersionKind][]*pkgid.Upstream{}
 	for gvk, upstreamSets := range r.pkgDependencies {
 		upstreams := upstreamSets.UnsortedList()
 		sort.SliceStable(upstreams, func(i, j int) bool {
