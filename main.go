@@ -80,14 +80,16 @@ func main() {
 		},
 		pkgv1alpha1.ConvertPackageRevisionsFieldSelector,
 	)
-	runScheme.AddFieldLabelConversionFunc(
-		schema.GroupVersionKind{
-			Group:   pkgv1alpha1.Group,
-			Version: pkgv1alpha1.Version,
-			Kind:    pkgv1alpha1.PackageRevisionResourcesKind,
-		},
-		pkgv1alpha1.ConvertPackageRevisionResourcesFieldSelector,
-	)
+	/*
+		runScheme.AddFieldLabelConversionFunc(
+			schema.GroupVersionKind{
+				Group:   pkgv1alpha1.Group,
+				Version: pkgv1alpha1.Version,
+				Kind:    pkgv1alpha1.PackageRevisionResourcesKind,
+			},
+			pkgv1alpha1.ConvertPackageRevisionResourcesFieldSelector,
+		)
+	*/
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: runScheme,
