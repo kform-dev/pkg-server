@@ -245,6 +245,7 @@ func (r *Store) GetPkgRevDependencies(ctx context.Context, cr *pkgv1alpha1.Packa
 }
 
 func (r *Store) Print(ctx context.Context) {
+	/*
 	fmt.Println("****** API resources ******")
 	r.catalogAPIStore.List(ctx, func(ctx context.Context, key storebackend.Key, api *API) {
 		fmt.Printf("type: %s, group: %s, kind: %s, resource: %s, versions: %v\n", api.Type.String(), key.Namespace, key.Name, api.Resource, api.Versions)
@@ -255,6 +256,7 @@ func (r *Store) Print(ctx context.Context) {
 		fmt.Println(key.Namespace, key.Name, kind)
 	})
 	fmt.Println("****************************")
+	*/
 	fmt.Println("**** Package Catalog ****")
 	r.catalogPkgStore.List(ctx, func(ctx context.Context, key storebackend.Key, dep *Dependency) {
 		fmt.Println("package", key.Namespace, "revision", key.Name)
