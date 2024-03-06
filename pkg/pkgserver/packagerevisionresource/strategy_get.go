@@ -28,7 +28,7 @@ import (
 
 func (r *strategy) Get(ctx context.Context, key types.NamespacedName) (runtime.Object, error) {
 	log := log.FromContext(ctx)
-	log.Info("get...")
+	log.Info("get...", "key", key)
 	pkgRev, err := r.getPackageRevision(ctx, key)
 	if err != nil {
 		log.Error("pkgRevResources cannot get pkgRev in apiserver", "key", key.String(), "error", err.Error())

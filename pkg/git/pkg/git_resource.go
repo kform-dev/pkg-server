@@ -46,11 +46,12 @@ func (r *gitRepository) GetResources(ctx context.Context, pkgRev *pkgv1alpha1.Pa
 }
 
 func getResources(ctx context.Context, pkgID pkgid.PackageID, commit *object.Commit) (map[string]string, error) {
-	//log := log.FromContext(ctx)
+	log := log.FromContext(ctx)
 	resources := map[string]string{}
 	// get the root tree of the package
 	pkgRootTree, err := getPackageTree(ctx, pkgID, commit)
 	if err != nil {
+		log.Error("cannot get package root tree", "error", err.Error())
 		return resources, err
 	}
 	if pkgRootTree == nil {
@@ -111,6 +112,7 @@ func getPackageTree(ctx context.Context, pkgID pkgid.PackageID, commit *object.C
 	log := log.FromContext(ctx)
 	rootTree, err := commit.Tree()
 	if err != nil {
+		log.Error("cannot get root tree", "error", err.Error())
 		return nil, fmt.Errorf("cannot resolve commit %v to tree (corrupted repository?): %w", commit.Hash, err)
 	}
 	tree, err := rootTree.Tree(pkgID.Path())
