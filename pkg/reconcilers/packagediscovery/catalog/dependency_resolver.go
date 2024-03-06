@@ -73,6 +73,8 @@ func newDependencyResolver(recorder recorder.Recorder[diag.Diagnostic], catalogA
 // package resources
 // -> create an upstream package dependency
 func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, resources []any) *Dependency {
+	// input resource can identify a dependency via the claimv1alpha1.PackageDependency
+	// if so we capture this
 	for _, krmResource := range inputs {
 		//get apiVersion and kind from krmResource
 		apiVersion, kind := getApiVersionKind(krmResource)
@@ -229,6 +231,7 @@ func (r *dependencyResolver) addPolicyRuleDependencies(ctx context.Context, gvk 
 					Version: "*",
 					Kind:    kind,
 				}
+				api.PkgID = *api.PkgID.DeepCopy()
 				if api.PkgID.PkgString() != r.dependency.PkgString() {
 					r.addDependency(gvk, api)
 				}
