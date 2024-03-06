@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/henderiw/logger/log"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
@@ -110,6 +111,9 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 		}
 		appendItem(v, buildPackageRevisionResources(&pkgRev, resources))
 	}
+	sort.SliceStable(newListObj.Items, func(i, j int) bool {
+		return newListObj.Items[i].Name < newListObj.Items[j].Name
+	})
 	return newListObj, nil
 }
 
