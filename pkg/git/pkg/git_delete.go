@@ -18,6 +18,7 @@ package pkg
 
 import (
 	"context"
+	"strings"
 
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 )
@@ -34,7 +35,9 @@ func (r *gitRepository) DeletePackageRevision(ctx context.Context, pkgRev *pkgv1
 		pkgTagRefName := packageTagRefName(pkgRev.Spec.PackageID, pkgRev.Spec.PackageID.Revision)
 		if tagRef, err := r.repo.Repo.Reference(pkgTagRefName, true); err == nil {
 			if err := r.deleteRef(ctx, tagRef); err != nil {
-				return err
+				if !strings.Contains(err.Error(), "reference not found") {
+					return err
+				}
 			}
 		}
 		// TBD: do we need an option to delete the pkgWorkspace branch ? Prefer not to do this.
@@ -43,10 +46,12 @@ func (r *gitRepository) DeletePackageRevision(ctx context.Context, pkgRev *pkgv1
 			return err
 		} else {
 			if err := r.deleteRef(ctx, wsPkgBranchRef); err != nil {
-				return err
+				if !strings.Contains(err.Error(), "reference not found") {
+					return err
+				}
 			}
 		}
-
+		return nil
 	} else {
 		// TBD: do we need an option to retain the pkgWorkspace branch ?
 		wsPkgRefName := workspacePackageBranchRefName(pkgRev.Spec.PackageID)
