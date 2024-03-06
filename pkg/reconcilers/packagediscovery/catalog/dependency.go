@@ -105,14 +105,14 @@ func (r *Dependency) AddGVKResolutionWarning(gvk schema.GroupVersionKind, err er
 	r.resolutionWarnings[gvk] = err
 }
 
-func (r *Dependency) AddPkgDependency(gvk schema.GroupVersionKind, upstream pkgid.Upstream) {
+func (r *Dependency) AddPkgDependency(gvk schema.GroupVersionKind, upstream *pkgid.Upstream) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
 	if _, ok := r.pkgDependencies[gvk]; !ok {
 		r.pkgDependencies[gvk] = sets.New[pkgid.Upstream]()
 	}
-	r.pkgDependencies[gvk].Insert(upstream)
+	r.pkgDependencies[gvk].Insert(*upstream)
 }
 
 // ListPkgDependencies lists a unique set of upstream packages
