@@ -397,7 +397,7 @@ func (r *reconciler) isPkgRevRecursivelyresolved(ctx context.Context, pkgRev *pk
 	for _, upstream := range upstreamPkgDeps {
 		log.Info("upstream dependency", "pkgRev", pkgRev.Name, "upstream", upstream.String())
 		upstream := upstream
-		pkgVar := buildPackageVariant(ctx, pkgRev, upstream)
+		pkgVar := buildPackageVariant(ctx, pkgRev, &upstream)
 		// TODO: could we use the memory store to find this info iso reaching out to the cache
 		depPkgRev, pkgState, err := r.getPkgState(ctx, &pkgVar.Spec.Downstream)
 		if err != nil {
@@ -407,7 +407,7 @@ func (r *reconciler) isPkgRevRecursivelyresolved(ctx context.Context, pkgRev *pk
 		case pkgid.PkgState_NotAvailable:
 			// continue recursively
 			// get latest revision from the catalog
-			latestCatalogPkgRev, err := r.getLatestCatalogPackageRevision(ctx, upstream)
+			latestCatalogPkgRev, err := r.getLatestCatalogPackageRevision(ctx, &upstream)
 			if err != nil {
 				return false, fmt.Errorf("cannot get latest catalog package revision for upstream: %s, error: %s", upstream.String(), err.Error())
 			}
