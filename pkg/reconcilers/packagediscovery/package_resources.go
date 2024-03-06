@@ -36,8 +36,6 @@ import (
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	koe "github.com/nephio-project/nephio/krm-functions/lib/kubeobject"
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -61,26 +59,37 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 		log.Error("cannot list package resources", "error", err.Error())
 		return packages, resources, inputs, outputs, err
 	}
-	for _, pkgRev := range pkgRevResourcesList.Items {
-		log.Info("package resources from list", "pkgRev", pkgRev.Name)
+	var pkgRevResources *pkgv1alpha1.PackageRevisionResources
+	for _, pkgRevRes := range pkgRevResourcesList.Items {
+		pkgRevRes := pkgRevRes
+		log.Info("package resources from list", "pkgRev", pkgRevResources.Name)
+		if pkgRevRes.Name == cr.Name && pkgRevRes.Namespace == cr.Namespace {
+			pkgRevResources = &pkgRevRes
+			break
+		}
+	}
+	if pkgRevResources == nil {
+		log.Error("cannot get package resources", "key", cr.Name)
 	}
 
-	pkgRevKey := types.NamespacedName{
-		Namespace: cr.Namespace,
-		Name:      cr.Name,
-	}
+	/*
+		pkgRevKey := types.NamespacedName{
+			Namespace: cr.Namespace,
+			Name:      cr.Name,
+		}
 
-	pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
-	if err := r.Get(ctx, pkgRevKey, pkgRevResources, &client.GetOptions{
-		Raw: &v1.GetOptions{ResourceVersion: "0"},
-	}); err != nil {
-		log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
-		return packages, resources, inputs, outputs, err
-	}
+		pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
+		if err := r.Get(ctx, pkgRevKey, pkgRevResources, &client.GetOptions{
+			Raw: &v1.GetOptions{ResourceVersion: "0"},
+		}); err != nil {
+			log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
+			return packages, resources, inputs, outputs, err
+		}
+	*/
 
 	pkgRecorder := recorder.New[diag.Diagnostic]()
 	ctx = context.WithValue(ctx, kformtypes.CtxKeyRecorder, pkgRecorder)
-	p, err := pkgparser.New(ctx, filepath.Base(pkgRevKey.Name))
+	p, err := pkgparser.New(ctx, filepath.Base(cr.Spec.PackageID.Package))
 	if err != nil {
 		log.Error("cannot get package parser", "error", err.Error())
 		return packages, resources, inputs, outputs, err
