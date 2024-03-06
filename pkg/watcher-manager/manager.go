@@ -119,7 +119,7 @@ func (r *watcherManager) Start(ctx context.Context) {
 						r.sem.Release(1)
 						return
 					}
-					log.Info("watch callback done", "key", w.key)
+					log.Debug("watch callback done", "key", w.key)
 				}()
 			}
 			log.Debug("watchermanager goroutines waiting", "eventType", event.Type, "watchers", r.watchers.len())
