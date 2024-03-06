@@ -25,7 +25,7 @@ rules:
   resources: ["packagerevisions", "packagerevisions/status"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 - apiGroups: ["pkg.kform.dev"]
-  resources: ["packagerevisionresources", "packagerevisionresources/status"]
+  resources: ["packagerevisionresourceses", "packagerevisionresourceses/status"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]

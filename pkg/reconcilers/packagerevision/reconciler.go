@@ -329,48 +329,49 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if cr.GetCondition(condition.ConditionTypeReady).Status != v1.ConditionTrue {
 			switch cr.Spec.Tasks[0].Type {
 			case pkgv1alpha1.TaskTypeClone:
-				/*
-					cachedRepo, err := r.getRepo(ctx, cr)
-					if err != nil {
-						//log.Error("cannot approve packagerevision", "error", err)
-						cr.SetConditions(condition.Failed(err.Error()))
-						r.recorder.Eventf(cr, corev1.EventTypeWarning,
-							"Error", "error %s", err.Error())
-						return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
-					}
-				*/
+
+				_, cachedRepo, err := r.getRepo(ctx, cr)
+				if err != nil {
+					//log.Error("cannot approve packagerevision", "error", err)
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+
 				resources, err := r.getResources(ctx, cr, cr.Spec.Upstream)
 				if err != nil {
-					//log.Error("cannot get resources from src repo", "error", err)
+					log.Error("cannot get resources from src repo", "error", err)
+					cr.SetConditions(condition.Failed(err.Error()))
+					r.recorder.Eventf(cr, corev1.EventTypeWarning,
+						"Error", "error %s", err.Error())
+					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+				}
+
+				if err := cachedRepo.UpsertPackageRevision(ctx, cr, resources); err != nil {
+					log.Error("cannot update packagerevision", "error", err)
 					cr.SetConditions(condition.Failed(err.Error()))
 					r.recorder.Eventf(cr, corev1.EventTypeWarning,
 						"Error", "error %s", err.Error())
 					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 				}
 				/*
-					if err := cachedRepo.UpsertPackageRevision(ctx, cr, resources); err != nil {
-						//log.Error("cannot update packagerevision", "error", err)
+					pkgRevResources := pkgv1alpha1.BuildPackageRevisionResources(
+						cr.ObjectMeta,
+						pkgv1alpha1.PackageRevisionResourcesSpec{
+							PackageID: *cr.Spec.PackageID.DeepCopy(),
+							Resources: resources,
+						},
+						pkgv1alpha1.PackageRevisionResourcesStatus{},
+					)
+					if err := r.Create(ctx, pkgRevResources); err != nil {
+						//log.Error("cannot update packagerevision resources", "error", err)
 						cr.SetConditions(condition.Failed(err.Error()))
 						r.recorder.Eventf(cr, corev1.EventTypeWarning,
 							"Error", "error %s", err.Error())
 						return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 					}
 				*/
-				pkgRevResources := pkgv1alpha1.BuildPackageRevisionResources(
-					cr.ObjectMeta,
-					pkgv1alpha1.PackageRevisionResourcesSpec{
-						PackageID: *cr.Spec.PackageID.DeepCopy(),
-						Resources: resources,
-					},
-					pkgv1alpha1.PackageRevisionResourcesStatus{},
-				)
-				if err := r.Create(ctx, pkgRevResources); err != nil {
-					//log.Error("cannot update packagerevision resources", "error", err)
-					cr.SetConditions(condition.Failed(err.Error()))
-					r.recorder.Eventf(cr, corev1.EventTypeWarning,
-						"Error", "error %s", err.Error())
-					return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
-				}
 			case pkgv1alpha1.TaskTypeInit:
 				msg := fmt.Sprintf("unsupported taskType: %s", string(cr.Spec.Tasks[0].Type))
 				cr.SetConditions(condition.Failed(msg))
