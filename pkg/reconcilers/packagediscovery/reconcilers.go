@@ -27,6 +27,7 @@ import (
 	"github.com/henderiw/resource"
 	"github.com/kform-dev/kform/pkg/recorder"
 	"github.com/kform-dev/kform/pkg/recorder/diag"
+	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	"github.com/kform-dev/pkg-server/apis/pkgid"
 	"github.com/kform-dev/pkg-server/pkg/reconcilers"
@@ -69,6 +70,7 @@ func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c i
 		}
 	*/
 	r.Client = mgr.GetClient()
+	r.clientset = cfg.ClientSet
 	//r.clientset = cfg.ClientSet
 	r.finalizer = resource.NewAPIFinalizer(mgr.GetClient(), finalizer)
 	r.catalogStore = cfg.CatalogStore
@@ -86,6 +88,7 @@ func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c i
 
 type reconciler struct {
 	client.Client
+	clientset *versioned.Clientset
 	//clientset    *versioned.Clientset
 	finalizer    *resource.APIFinalizer
 	catalogStore *catalog.Store

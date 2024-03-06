@@ -36,9 +36,8 @@ import (
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	koe "github.com/nephio-project/nephio/krm-functions/lib/kubeobject"
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.PackageRevision) (
@@ -87,16 +86,23 @@ func (r *reconciler) getPackageResources(ctx context.Context, cr *pkgv1alpha1.Pa
 		}
 	*/
 
-	pkgRevKey := types.NamespacedName{
+	key := types.NamespacedName{
 		Namespace: cr.Namespace,
 		Name:      cr.Name,
 	}
 
-	pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
-	if err := r.Get(ctx, pkgRevKey, pkgRevResources, &client.GetOptions{Raw: &v1.GetOptions{ResourceVersion: "0"}}); err != nil {
-		log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
+	pkgRevResources, err := r.clientset.PkgV1alpha1().PackageRevisionResourceses(key.Namespace).Get(ctx, key.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Error("cannot get package resources", "key", key.String(), "error", err.Error())
 		return packages, resources, inputs, outputs, err
 	}
+	/*
+		pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
+		if err := r.Get(ctx, pkgRevKey, pkgRevResources, &client.GetOptions{Raw: &v1.GetOptions{ResourceVersion: "0"}}); err != nil {
+			log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
+			return packages, resources, inputs, outputs, err
+		}
+	*/
 
 	pkgRecorder := recorder.New[diag.Diagnostic]()
 	ctx = context.WithValue(ctx, kformtypes.CtxKeyRecorder, pkgRecorder)
