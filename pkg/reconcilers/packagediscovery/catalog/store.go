@@ -43,6 +43,16 @@ const (
 	APIType_Package
 )
 
+func (r APIType) String() string {
+	switch r {
+	case APIType_Core:
+		return "core"
+	case APIType_Package:
+		return "package"
+	}
+	return "unknown"
+}
+
 type API struct {
 	Type     APIType
 	Kind     string
@@ -236,7 +246,7 @@ func (r *Store) GetPkgRevDependencies(ctx context.Context, cr *pkgv1alpha1.Packa
 func (r *Store) Print(ctx context.Context) {
 	fmt.Println("****** API resources ******")
 	r.catalogAPIStore.List(ctx, func(ctx context.Context, key storebackend.Key, api *API) {
-		fmt.Printf("group: %s, kind: %s, resource: %s, versions: %v\n", key.Namespace, key.Name, api.Resource, api.Versions)
+		fmt.Printf("type: %s, group: %s, kind: %s, resource: %s, versions: %v\n", api.Type.String(), key.Namespace, key.Name, api.Resource, api.Versions)
 	})
 	fmt.Println("****************************")
 	fmt.Println("******** GR MAPPING ********")
