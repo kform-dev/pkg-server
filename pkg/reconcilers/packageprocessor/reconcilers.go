@@ -43,8 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
@@ -76,7 +76,8 @@ func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c i
 			return nil, err
 		}
 	*/
-	r.APIPatchingApplicator = resource.NewAPIPatchingApplicator(mgr.GetClient())
+	//r.APIPatchingApplicator = resource.NewAPIPatchingApplicator(mgr.GetClient())
+	r.Client = mgr.GetClient()
 	r.finalizer = resource.NewAPIFinalizer(mgr.GetClient(), finalizer)
 	r.recorder = mgr.GetEventRecorderFor(controllerName)
 	r.clientset = cfg.ClientSet
@@ -88,7 +89,7 @@ func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c i
 }
 
 type reconciler struct {
-	resource.APIPatchingApplicator
+	client.Client
 	finalizer *resource.APIFinalizer
 	recorder  record.EventRecorder
 	clientset *versioned.Clientset
@@ -183,7 +184,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		//pkgrevResources = &pkgv1alpha1.PackageRevisionResources{}
-		if err := r.Get(ctx, key, pkgrevResources, &client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: "0"}}); err != nil {
+		if err := r.Get(ctx, key, pkgrevResources); err != nil {
 			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
 				controllerEvent, "error %s", err.Error())
