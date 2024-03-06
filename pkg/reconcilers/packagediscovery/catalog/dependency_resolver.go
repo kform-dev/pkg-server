@@ -146,7 +146,7 @@ func (r *dependencyResolver) resolve(ctx context.Context, packages, inputs, reso
 			Group:   gv.Group,
 			Version: gv.Version,
 			Kind:    kind,
-		}, &pkgid.Upstream{Repository: "tbd", Revision: "*", Realm: "", Package: "tbd"})
+		}, pkgid.Upstream{Repository: "tbd", Revision: "*", Realm: "", Package: "tbd"})
 
 	}
 	r.dependency.AddResolutionError(r.recorder.Get().Error())
@@ -264,7 +264,7 @@ func (r *dependencyResolver) gatherDependencyfromPVAR(ctx context.Context, gvk s
 	if !semver.IsValid(pvar.Spec.Upstream.Revision) {
 		upstream.Revision = "*"
 	}
-	r.dependency.AddPkgDependency(gvk, &upstream)
+	r.dependency.AddPkgDependency(gvk, upstream)
 	return nil
 }
 
@@ -286,7 +286,7 @@ func (r *dependencyResolver) gatherDependencyfromPDEP(ctx context.Context, gvk s
 	if !semver.IsValid(pdep.Spec.Upstream.Revision) {
 		upstream.Revision = "*"
 	}
-	r.dependency.AddPkgDependency(gvk, &upstream)
+	r.dependency.AddPkgDependency(gvk, upstream)
 	return nil
 }
 
@@ -317,7 +317,7 @@ func (r *dependencyResolver) addDependency(gvk schema.GroupVersionKind, api *API
 		return
 	}
 
-	upstream := &pkgid.Upstream{
+	upstream := pkgid.Upstream{
 		Repository: api.PkgID.Repository,
 		Realm:      api.PkgID.Realm,
 		Package:    api.PkgID.Package,
@@ -332,6 +332,6 @@ func (r *dependencyResolver) ListCoreDependencies() []schema.GroupVersionKind {
 
 }
 
-func (r *dependencyResolver) ListGVKPkgDependencies() map[schema.GroupVersionKind][]*pkgid.Upstream {
+func (r *dependencyResolver) ListGVKPkgDependencies() map[schema.GroupVersionKind][]pkgid.Upstream {
 	return r.dependency.ListGVKPkgDependencies()
 }
