@@ -358,7 +358,7 @@ func (r *reconciler) getLatestCatalogPackageRevision(ctx context.Context, upstre
 			},
 		*/
 	}
-	log.Debug("getLatestCatalogPackageRevision", "upstream", upstream.String())
+	log.Info("getLatestCatalogPackageRevision", "upstream", upstream.String())
 	pkgRevList := pkgv1alpha1.PackageRevisionList{}
 	if err := r.List(ctx, &pkgRevList, opts...); err != nil {
 		return nil, err
@@ -383,7 +383,7 @@ func (r *reconciler) getLatestCatalogPackageRevision(ctx context.Context, upstre
 		}
 	}
 	if latestPkgRev == nil {
-		return nil, fmt.Errorf("cannot get latests ppkrev upstream: %v", upstream)
+		return nil, fmt.Errorf("cannot get latests ppkrev upstream: %v", upstream.String())
 	}
 	return latestPkgRev, nil
 }
@@ -395,6 +395,7 @@ func (r *reconciler) isPkgRevRecursivelyresolved(ctx context.Context, pkgRev *pk
 		return isResolved, nil
 	}
 	for _, upstream := range upstreamPkgDeps {
+		log.Info("upstream dependency", "pkgRev", pkgRev.Name, "upstream", upstream.String())
 		upstream := upstream
 		pkgVar := buildPackageVariant(ctx, pkgRev, &upstream)
 		// TODO: could we use the memory store to find this info iso reaching out to the cache
