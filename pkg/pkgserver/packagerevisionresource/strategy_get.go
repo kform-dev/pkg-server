@@ -56,6 +56,6 @@ func (r *strategy) Get(ctx context.Context, key types.NamespacedName) (runtime.O
 	}
 	log.Info("build resources", "key", pkgRev.Name)
 	pkgRevResources := buildPackageRevisionResources(pkgRev, resources)
-	log.Info("pkgRevResources", "value", pkgRevResources)
+	//log.Info("pkgRevResources", "value", pkgRevResources)
 	return pkgRevResources, nil
 }

@@ -174,7 +174,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// determine error
 	// create output
 	if cr.GetCondition(controllerCondition).Status == metav1.ConditionFalse {
-		pkgrevResources, err := r.clientset.PkgV1alpha1().PackageRevisionResourceses(key.Namespace).Get(ctx, key.Name, metav1.GetOptions{})
+		pkgRevResources, err := r.clientset.PkgV1alpha1().PackageRevisionResourceses(key.Namespace).Get(ctx, key.Name, metav1.GetOptions{})
 		if err != nil {
 			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
@@ -184,6 +184,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		//pkgrevResources = &pkgv1alpha1.PackageRevisionResources{}
+		/*
 		if err := r.Get(ctx, key, pkgrevResources); err != nil {
 			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
@@ -191,8 +192,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cr.SetConditions(condition.ConditionUpdate(controllerCondition, "cannot get resources from pkgRevResources", err.Error()))
 			return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 		}
+		*/
 		resourceData := memory.NewStore[[]byte]()
-		for k, v := range pkgrevResources.Spec.Resources {
+		for k, v := range pkgRevResources.Spec.Resources {
 			// Replace the ending \r\n (line ending used in windows) with \n and then split it into multiple YAML documents
 			// if it contains document separators (---)
 			values, err := pkgio.SplitDocuments(strings.ReplaceAll(v, "\r\n", "\n"))
