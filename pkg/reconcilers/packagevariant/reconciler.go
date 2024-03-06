@@ -100,12 +100,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !cr.GetDeletionTimestamp().IsZero() {
 		// delete the package revisions
-		if err := r.deletePackageRevisions(ctx, cr); err != nil {
+		done, err := r.deletePackageRevisions(ctx, cr)
+		if err != nil {
 			log.Error("cannot delete pkgRevs", "error", err)
 			cr.SetConditions(condition.Failed(err.Error()))
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
 				"Error", "error %s", err.Error())
 			return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+		}
+		if !done {
+			cr.SetConditions(condition.Failed("deleting"))
+			r.recorder.Eventf(cr, corev1.EventTypeNormal,
+				"packageVariant", "deleting")
+			return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)	
 		}
 		// remove the finalizer
 		if err := r.finalizer.RemoveFinalizer(ctx, cr); err != nil {
@@ -153,7 +160,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	cr.SetConditions(condition.Ready())
-	r.recorder.Eventf(cr, corev1.EventTypeWarning,
+	r.recorder.Eventf(cr, corev1.EventTypeNormal,
 		"packageVariant", "ready")
 	return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 }
@@ -189,23 +196,29 @@ func (r *reconciler) validateDownstreamRepo(ctx context.Context, pkgVar *configv
 	}, repo)
 }
 
-func (r *reconciler) deletePackageRevisions(ctx context.Context, pkgVar *configv1alpha1.PackageVariant) error {
+func (r *reconciler) deletePackageRevisions(ctx context.Context, pkgVar *configv1alpha1.PackageVariant) (bool, error) {
 	log := log.FromContext(ctx)
 	// get downstream packageRevisions, the hash does not matter
 	pkgRevs, _, err := r.getDownstreamPRs(ctx, pkgVar, [sha1.Size]byte{})
 	if err != nil {
 		log.Error("cannot get downstream package revisions", "error", err)
-		return err
+		return false, err
 	}
 	// delete the remianing packageRevisions
+	allDone := true
 	for _, pkgRev := range pkgRevs {
 		pkgRev := pkgRev
 		log.Info("deleteOrOrphan delete from pkgVar", "pkgRev", pkgRev.Name)
-		if err := r.deleteOrOrphan(ctx, pkgRev, pkgVar); err != nil {
+		done, err := r.deleteOrOrphan(ctx, pkgRev, pkgVar)
+		if  err != nil {
 			log.Error("cannot delete or orphan the pkgRev", "pkgRev", pkgRev.Name)
+			continue
+		}
+		if !done  {
+			allDone = false
 		}
 	}
-	return nil
+	return allDone, nil
 }
 
 func (r *reconciler) ensurePackageRevision(ctx context.Context, pkgVar *configv1alpha1.PackageVariant) error {
@@ -248,7 +261,7 @@ func (r *reconciler) ensurePackageRevision(ctx context.Context, pkgVar *configv1
 	for _, pkgRev := range pkgRevs {
 		log.Info("deleteOrOrphan ensurePackageRevision", "pkgRev", pkgRev.Name)
 		if pkgRev.Spec.PackageID.Workspace != pkgVar.GetWorkspaceName(hash) {
-			if err := r.deleteOrOrphan(ctx, pkgRev, pkgVar); err != nil {
+			if _, err := r.deleteOrOrphan(ctx, pkgRev, pkgVar); err != nil {
 				log.Error("cannot delete or orphan the pkgRev", "pkgRev", pkgRev.Name)
 			}
 		}
@@ -295,8 +308,9 @@ func (r *reconciler) getDownstreamPRs(ctx context.Context, pkgVar *configv1alpha
 				// We own this package, but it isn't a match for our downstream target,
 				// which means that we created it but no longer need it.
 				log.Info("deleteOrOrphan getDownstreamPRs", "pkgRev", pkgRev.Name)
-				if err := r.deleteOrOrphan(ctx, &pkgRev, pkgVar); err != nil {
+				if _, err := r.deleteOrOrphan(ctx, &pkgRev, pkgVar); err != nil {
 					log.Error("cannot delete or orphan pkgRev", "pkgRev", pkgRev.Name)
+					continue
 				}
 			}
 		}
@@ -316,36 +330,36 @@ func (r *reconciler) getDownstreamPRs(ctx context.Context, pkgVar *configv1alpha
 	return existingPkgrevs, exists, nil
 }
 
-func (r *reconciler) deleteOrOrphan(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, pkgVar *configv1alpha1.PackageVariant) error {
+func (r *reconciler) deleteOrOrphan(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, pkgVar *configv1alpha1.PackageVariant) (bool, error) {
 	log := log.FromContext(ctx)
 	log.Info("deleteOrOrphan", "pkgRev", pkgRev.Name)
 	switch pkgVar.Spec.DeletionPolicy {
 	case configv1alpha1.DeletionPolicyDelete:
-		return r.deletePackageRevision(ctx, pkgRev)
+		return r.deletePackageRevision(ctx, pkgRev) // indicate true for successfull delete and false when deletion proposed or err
 	case configv1alpha1.DeletionPolicyOrphan:
-		return r.orphanPackageRevision(ctx, pkgRev, pkgVar)
+		return true, r.orphanPackageRevision(ctx, pkgRev, pkgVar)
 	default:
 		// this should never happen, because the pv should already be validated beforehand
-		return fmt.Errorf("unexpected deletionPolicy %s for pkgVar %s", string(pkgVar.Spec.DeletionPolicy), pkgVar.Name)
+		return false, fmt.Errorf("unexpected deletionPolicy %s for pkgVar %s", string(pkgVar.Spec.DeletionPolicy), pkgVar.Name)
 	}
 }
 
-func (r *reconciler) deletePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) error {
+func (r *reconciler) deletePackageRevision(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision) (bool, error) {
 	switch pkgRev.Spec.Lifecycle {
 	case pkgv1alpha1.PackageRevisionLifecycleDraft, pkgv1alpha1.PackageRevisionLifecycleProposed, pkgv1alpha1.PackageRevisionLifecycleDeletionProposed:
 		if err := r.Client.Delete(ctx, pkgRev); err != nil {
-			return err
+			return false, err
 		}
-		return nil
+		return true, nil
 	case pkgv1alpha1.PackageRevisionLifecyclePublished:
 		pkgRev.Spec.Lifecycle = pkgv1alpha1.PackageRevisionLifecycleDeletionProposed
 		if err := r.Client.Update(ctx, pkgRev); err != nil {
-			return err
+			return false, err
 		}
-		return nil
+		return false, nil
 	default:
 		// should never happen
-		return fmt.Errorf("unexpected lifecycle %s for pkgVar %s", string(pkgRev.Spec.Lifecycle), pkgRev.Name)
+		return false, fmt.Errorf("unexpected lifecycle %s for pkgVar %s", string(pkgRev.Spec.Lifecycle), pkgRev.Name)
 	}
 }
 
@@ -377,6 +391,8 @@ func (r *reconciler) adoptPackageRevision(ctx context.Context, pkgRev *pkgv1alph
 */
 
 func getOwnerReference(ctx context.Context, pkgVar *configv1alpha1.PackageVariant) metav1.OwnerReference {
+	log := log.FromContext(ctx)
+	log.Debug("getOwnerReference")
 	return metav1.OwnerReference{
 		APIVersion:         pkgVar.APIVersion,
 		Kind:               pkgVar.Kind,
@@ -388,6 +404,8 @@ func getOwnerReference(ctx context.Context, pkgVar *configv1alpha1.PackageVarian
 }
 
 func removeOwnerRefByUID(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, pkgVar *configv1alpha1.PackageVariant) []metav1.OwnerReference {
+	log := log.FromContext(ctx)
+	log.Debug("removeOwnerRefByUID")
 	var newOwnerReferences []metav1.OwnerReference
 	for _, ownerRef := range pkgRev.GetOwnerReferences() {
 		if ownerRef.APIVersion == pkgVar.APIVersion &&
@@ -402,6 +420,8 @@ func removeOwnerRefByUID(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevisio
 }
 
 func isOwned(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, pkgVar *configv1alpha1.PackageVariant) bool {
+	log := log.FromContext(ctx)
+	log.Debug("isOwned")
 	for _, ownerRef := range pkgRev.GetOwnerReferences() {
 		if ownerRef.APIVersion == pkgVar.APIVersion &&
 			ownerRef.Kind == pkgVar.Kind &&
