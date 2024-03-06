@@ -171,6 +171,7 @@ func (r *dependencyResolver) gatherDependencyfromClusterRole(ctx context.Context
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
 	// add the dependency for the rbac clusterrole resource
+	api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 	// add the policy rules dependencies
 	return r.addPolicyRuleDependencies(ctx, gvk, clusterRole.Rules)
@@ -196,6 +197,7 @@ func (r *dependencyResolver) gatherDependencyfromRole(ctx context.Context, gvk s
 	if _, ok := api.Versions[gvk.Version]; !ok {
 		return fmt.Errorf("cannot resolve version for gvk: %s", gvk.String())
 	}
+	api.PkgID = *api.PkgID.DeepCopy()
 	r.addDependency(gvk, api)
 
 	return r.addPolicyRuleDependencies(ctx, gvk, role.Rules)
