@@ -11,6 +11,7 @@ import (
 	"github.com/henderiw/apiserver-builder/pkg/builder"
 	"github.com/henderiw/logger/log"
 	configv1alpha1 "github.com/kform-dev/pkg-server/apis/config/v1alpha1"
+	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned"
 	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned/scheme"
 	pkgopenapi "github.com/kform-dev/pkg-server/apis/generated/openapi"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
@@ -97,12 +98,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	/*
-		clientset, err := versioned.NewForConfig(mgr.GetConfig())
-		if err != nil {
-			panic(err.Error())
-		}
-	*/
+	clientset, err := versioned.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		panic(err.Error())
+	}
 
 	cache := cache.NewCache(cacheDir, 1*time.Minute, cache.Options{
 		Client: mgr.GetClient(),
@@ -115,7 +114,7 @@ func main() {
 	ctrlCfg := &ctrlconfig.ControllerConfig{
 		RepoCache:    cache,
 		CatalogStore: catalog.NewStore(),
-		//ClientSet:    clientset,
+		ClientSet:    clientset,
 	}
 	for name, reconciler := range reconcilers.Reconcilers {
 		log.Info("reconciler", "name", name, "enabled", IsReconcilerEnabled(name))

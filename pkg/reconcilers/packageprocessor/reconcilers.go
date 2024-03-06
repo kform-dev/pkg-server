@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"reflect"
 	"strings"
 
 	"github.com/henderiw/logger/log"
@@ -29,6 +30,7 @@ import (
 	"github.com/kform-dev/kform/pkg/kform/runner"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	"github.com/kform-dev/pkg-server/apis/condition"
+	"github.com/kform-dev/pkg-server/apis/generated/clientset/versioned"
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	"github.com/kform-dev/pkg-server/apis/pkgid"
 	"github.com/kform-dev/pkg-server/pkg/reconcilers"
@@ -65,6 +67,10 @@ const (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c interface{}) (map[schema.GroupVersionKind]chan event.GenericEvent, error) {
+	cfg, ok := c.(*ctrlconfig.ControllerConfig)
+	if !ok {
+		return nil, fmt.Errorf("cannot initialize, expecting controllerConfig, got: %s", reflect.TypeOf(c).Name())
+	}
 	/*
 		if err := configv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 			return nil, err
@@ -73,6 +79,7 @@ func (r *reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, c i
 	r.APIPatchingApplicator = resource.NewAPIPatchingApplicator(mgr.GetClient())
 	r.finalizer = resource.NewAPIFinalizer(mgr.GetClient(), finalizer)
 	r.recorder = mgr.GetEventRecorderFor(controllerName)
+	r.clientset = cfg.ClientSet
 
 	return nil, ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
@@ -84,6 +91,7 @@ type reconciler struct {
 	resource.APIPatchingApplicator
 	finalizer *resource.APIFinalizer
 	recorder  record.EventRecorder
+	clientset *versioned.Clientset
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -165,7 +173,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// determine error
 	// create output
 	if cr.GetCondition(controllerCondition).Status == metav1.ConditionFalse {
-		pkgrevResources := &pkgv1alpha1.PackageRevisionResources{}
+		pkgrevResources, err := r.clientset.PkgV1alpha1().PackageRevisionResourceses(key.Namespace).Get(ctx, key.Name, metav1.GetOptions{})
+		if err != nil {
+			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
+			r.recorder.Eventf(cr, corev1.EventTypeWarning,
+				controllerEvent, "error %s", err.Error())
+			cr.SetConditions(condition.ConditionUpdate(controllerCondition, "cannot get resources from pkgRevResources", err.Error()))
+			return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+		}
+
+		//pkgrevResources = &pkgv1alpha1.PackageRevisionResources{}
 		if err := r.Get(ctx, key, pkgrevResources, &client.GetOptions{Raw: &metav1.GetOptions{ResourceVersion: "0"}}); err != nil {
 			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
 			r.recorder.Eventf(cr, corev1.EventTypeWarning,
