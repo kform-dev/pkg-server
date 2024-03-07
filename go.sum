@@ -211,6 +211,8 @@ github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kform-dev/kform v0.0.3-0.20240303171129-fe1f21cd1199 h1:D/E6PCqc2HHacITtl13Rn4qm6eY/sOD8FxgORVPMJcc=
 github.com/kform-dev/kform v0.0.3-0.20240303171129-fe1f21cd1199/go.mod h1:aNzmQHGdbFu1iMxtpxT4Xcm6IQAkCq/2OCPOcjUKyzg=
+github.com/kform-dev/kform v0.0.3-0.20240307073840-f5b4136c34b6 h1:3ToBJJUQrJZFaPiL325jbl2CtTGVwftIOGTqqVK82Gs=
+github.com/kform-dev/kform v0.0.3-0.20240307073840-f5b4136c34b6/go.mod h1:aNzmQHGdbFu1iMxtpxT4Xcm6IQAkCq/2OCPOcjUKyzg=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

@@ -43,8 +43,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
 func init() {
@@ -161,14 +161,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
 	}
 
-	/*
-		pkgRevResources := &pkgv1alpha1.PackageRevisionResources{}
-		if err := r.Get(ctx, pkgRevKey, pkgRevResources); err != nil {
-			log.Error("cannot get package resources", "key", pkgRevKey.String(), "error", err.Error())
-			return packages, resources, inputs, outputs, err
-		}
-	*/
-
 	// process resource data
 	// run kform
 	// determine error
@@ -185,31 +177,43 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		//pkgrevResources = &pkgv1alpha1.PackageRevisionResources{}
 		/*
-		if err := r.Get(ctx, key, pkgrevResources); err != nil {
-			log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
-			r.recorder.Eventf(cr, corev1.EventTypeWarning,
-				controllerEvent, "error %s", err.Error())
-			cr.SetConditions(condition.ConditionUpdate(controllerCondition, "cannot get resources from pkgRevResources", err.Error()))
-			return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
-		}
+			if err := r.Get(ctx, key, pkgrevResources); err != nil {
+				log.Error("cannot get resources from pkgRevResources", "key", key, "error", err)
+				r.recorder.Eventf(cr, corev1.EventTypeWarning,
+					controllerEvent, "error %s", err.Error())
+				cr.SetConditions(condition.ConditionUpdate(controllerCondition, "cannot get resources from pkgRevResources", err.Error()))
+				return ctrl.Result{Requeue: true}, errors.Wrap(r.Status().Update(ctx, cr), errUpdateStatus)
+			}
 		*/
 		resourceData := memory.NewStore[[]byte]()
-		for k, v := range pkgRevResources.Spec.Resources {
-			// Replace the ending \r\n (line ending used in windows) with \n and then split it into multiple YAML documents
-			// if it contains document separators (---)
-			values, err := pkgio.SplitDocuments(strings.ReplaceAll(v, "\r\n", "\n"))
+		for path, v := range pkgRevResources.Spec.Resources {
+			reader := pkgio.ByteReader{
+				Reader:    strings.NewReader(v),
+				DataStore: resourceData,
+				Path:      path,
+			}
+			_, err := reader.Read(ctx)
 			if err != nil {
 				continue
 			}
-			for i := range values {
-				// the Split used above will eat the tail '\n' from each resource. This may affect the
-				// literal string value since '\n' is meaningful in it.
-				if i != len(values)-1 {
-					values[i] += "\n"
+
+			/*
+				// Replace the ending \r\n (line ending used in windows) with \n and then split it into multiple YAML documents
+				// if it contains document separators (---)
+				values, err := pkgio.SplitDocuments(strings.ReplaceAll(v, "\r\n", "\n"))
+				if err != nil {
+					continue
 				}
-				resourceData.Create(ctx, store.ToKey(fmt.Sprintf("%s.%d", k, i)), []byte(values[i]))
-			}
-			//resourceData.Create(ctx, store.ToKey(k), []byte(v))
+				for i := range values {
+					// the Split used above will eat the tail '\n' from each resource. This may affect the
+					// literal string value since '\n' is meaningful in it.
+					if i != len(values)-1 {
+						values[i] += "\n"
+					}
+					resourceData.Create(ctx, store.ToKey(fmt.Sprintf("%s.%d", k, i)), []byte(values[i]))
+				}
+				//resourceData.Create(ctx, store.ToKey(k), []byte(v))
+			*/
 		}
 		// process input
 		inputData := memory.NewStore[[]byte]()

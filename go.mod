@@ -37,7 +37,7 @@ require (
 	github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe
 	github.com/henderiw/resource v0.0.0-20231228040228-cf28542fa2c6
 	github.com/henderiw/store v0.0.0-20240227111821-0eb66e3c7b40
-	github.com/kform-dev/kform v0.0.3-0.20240303171129-fe1f21cd1199
+	github.com/kform-dev/kform v0.0.3-0.20240307073840-f5b4136c34b6
 	github.com/nephio-project/nephio/krm-functions/lib v0.0.0-20240112001535-96b08ff4acb3
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
