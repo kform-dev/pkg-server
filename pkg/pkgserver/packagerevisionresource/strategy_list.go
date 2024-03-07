@@ -78,6 +78,7 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 	prrChan := make(chan prr)
 	var wg sync.WaitGroup
 	for _, pkgRev := range pkgRevs.Items {
+		pkgRev := pkgRev
 		if pkgRev.GetCondition(condition.ConditionTypeReady).Status == metav1.ConditionFalse {
 			// the package might not be cloned yet
 			continue
