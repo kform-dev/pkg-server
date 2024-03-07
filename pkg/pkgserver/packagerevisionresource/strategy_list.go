@@ -38,6 +38,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type prr struct {
+	prr *pkgv1alpha1.PackageRevisionResources
+	err error
+}
+
 func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
 	log := log.FromContext(ctx)
 	log.Info("list")
@@ -70,7 +75,7 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 		return nil, err
 	}
 
-	errChan := make(chan error)
+	prrChan := make(chan prr)
 	var wg sync.WaitGroup
 	for _, pkgRev := range pkgRevs.Items {
 		if pkgRev.GetCondition(condition.ConditionTypeReady).Status == metav1.ConditionFalse {
@@ -107,24 +112,35 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 			}
 		}
 		wg.Add(1)
-		errChan := make(chan error)
 		go func() error {
 			defer wg.Done()
 			repo, err := r.getRepository(ctx, types.NamespacedName{Name: pkgid.GetRepoNameFromPkgRevName(pkgRev.Name), Namespace: pkgRev.Namespace})
 			if err != nil {
-				errChan <- err
+				prrChan <- prr{
+					prr: nil,
+					err: err,
+				}
 			}
 			cachedRepo, err := r.cache.Open(ctx, repo)
 			if err != nil {
-				errChan <- err
+				prrChan <- prr{
+					prr: nil,
+					err: err,
+				}
 				//return apierrors.NewInternalError(err)
 			}
 			resources, err := cachedRepo.GetResources(ctx, &pkgRev)
 			if err != nil {
-				errChan <- err
+				prrChan <- prr{
+					prr: nil,
+					err: err,
+				}
 				//return apierrors.NewInternalError(err)
 			}
-			appendItem(v, buildPackageRevisionResources(&pkgRev, resources))
+			prrChan <- prr{
+				prr: buildPackageRevisionResources(&pkgRev, resources),
+				err: nil,
+			}
 			return nil
 		}()
 	}
@@ -133,11 +149,16 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 		wg.Wait()
 
 		// Close the error channel to indicate that no more errors will be sent
-		close(errChan)
+		close(prrChan)
 	}()
 	var errm error
-	for err := range errChan {
-		errors.Join(errm, err)
+	for prr := range prrChan {
+		if prr.err != nil {
+			errors.Join(errm, err)
+			continue
+		}
+		appendItem(v, prr.prr)
+		
 	}
 	if errm != nil {
 		return nil, apierrors.NewInternalError(errm)
