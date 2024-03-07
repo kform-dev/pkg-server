@@ -153,6 +153,7 @@ func (r *strategy) List(ctx context.Context, options *metainternalversion.ListOp
 	}()
 	var errm error
 	for prr := range prrChan {
+		prr := prr
 		if prr.err != nil {
 			errors.Join(errm, err)
 			continue
