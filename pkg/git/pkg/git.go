@@ -33,6 +33,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const (
+	LocalGitDirectory = ".git"
+)
+
 var tracer = otel.Tracer("gitpkg")
 
 type gitRepository struct {
@@ -53,9 +57,15 @@ func OpenRepository(ctx context.Context, cacheDir string, cr *configv1alpha1.Rep
 	ctx, span := tracer.Start(ctx, "OpenRepository", trace.WithAttributes())
 	defer span.End()
 
-	replace := strings.NewReplacer("/", "-", ":", "-")
-	dir := filepath.Join(cacheDir, replace.Replace(cr.GetURL()))
-	log.Info("open repo", "dir", dir)
+	// there are 2 secenario's:
+	// 1. client tool -> we need to open a single repo: we use <cacheDir>/.git
+	// 2. porch server -> we need to open multiple repos: we use <cacheDir>/<repo-url with modifications>
+	dir := cacheDir
+	if filepath.Base(cacheDir) != LocalGitDirectory {
+		replace := strings.NewReplacer("/", "-", ":", "-")
+		dir = filepath.Join(cacheDir, replace.Replace(cr.GetURL()))
+	}
+	log.Debug("open repo", "dir", dir)
 
 	// Cleanup the directory in case initialization fails.
 	cleanup := dir

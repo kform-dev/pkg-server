@@ -196,24 +196,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err != nil {
 				continue
 			}
-
-			/*
-				// Replace the ending \r\n (line ending used in windows) with \n and then split it into multiple YAML documents
-				// if it contains document separators (---)
-				values, err := pkgio.SplitDocuments(strings.ReplaceAll(v, "\r\n", "\n"))
-				if err != nil {
-					continue
-				}
-				for i := range values {
-					// the Split used above will eat the tail '\n' from each resource. This may affect the
-					// literal string value since '\n' is meaningful in it.
-					if i != len(values)-1 {
-						values[i] += "\n"
-					}
-					resourceData.Create(ctx, store.ToKey(fmt.Sprintf("%s.%d", k, i)), []byte(values[i]))
-				}
-				//resourceData.Create(ctx, store.ToKey(k), []byte(v))
-			*/
 		}
 		// process input
 		inputData := memory.NewStore[[]byte]()

@@ -1,8 +1,7 @@
-package getcmd
+package deletecmd
 
 import (
 	"context"
-	"fmt"
 
 	//docs "github.com/kform-dev/pkg-server/internal/docs/generated/initdocs"
 
@@ -11,14 +10,13 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"sigs.k8s.io/yaml"
 )
 
 // NewRunner returns a command runner.
-func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags) *Runner {
+func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags, k8s bool) *Runner {
 	r := &Runner{}
 	cmd := &cobra.Command{
-		Use:  "get PKGREV [flags]",
+		Use:  "delete PKGREV[<Target>.<REPO>.<REALM>.<PACKAGE>.<WORKSPACE>] [flags]",
 		Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
@@ -36,8 +34,8 @@ func NewRunner(ctx context.Context, version string, cfg *genericclioptions.Confi
 	return r
 }
 
-func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(ctx, version, kubeflags).Command
+func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags, k8s bool) *cobra.Command {
+	return NewRunner(ctx, version, kubeflags, k8s).Command
 }
 
 type Runner struct {
@@ -58,16 +56,17 @@ func (r *Runner) preRunE(_ *cobra.Command, _ []string) error {
 func (r *Runner) runE(c *cobra.Command, args []string) error {
 	ctx := c.Context()
 	//log := log.FromContext(ctx)
-	//log.Info("get packagerevision", "name", args[0])
+	//log.Info("delete packagerevision", "name", args[0])
+
+	namespace := "default"
+	if r.cfg.Namespace != nil && *r.cfg.Namespace != "" {
+		namespace = *r.cfg.Namespace
+	}
 
 	pkgRev := &pkgv1alpha1.PackageRevision{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: "default", Name: args[0]}, pkgRev); err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: args[0]}, pkgRev); err != nil {
 		return err
 	}
-	b, err := yaml.Marshal(pkgRev)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(b))
-	return nil
+	pkgRev.Spec.Tasks = []pkgv1alpha1.Task{}
+	return r.client.Delete(ctx, pkgRev)
 }

@@ -21,6 +21,7 @@ package github.com.kform_dev.pkg_server.apis.pkg.v1alpha1;
 
 import "github.com/kform-dev/pkg-server/apis/condition/generated.proto";
 import "github.com/kform-dev/pkg-server/apis/pkgid/generated.proto";
+import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
@@ -40,6 +41,41 @@ message PackageRevision {
 }
 
 message PackageRevisionApproval {
+}
+
+message PackageRevisionDependencies {
+  // Summary Error in case an error was discovered
+  optional string error = 1;
+
+  // Errors define the detailed error per reference
+  repeated PackageRevisionDependencyError errors = 2;
+
+  // Warnings define the detailed warning per reference
+  repeated PackageRevisionDependencyError warnings = 3;
+
+  // Dependencies define the dependency details per reference
+  repeated PackageRevisionDependency dependencies = 4;
+}
+
+message PackageRevisionDependency {
+  // Type defines the type of dependency we refer to
+  optional string type = 1;
+
+  // Reference the dependency is sourced from (apiversion, kind, namespace, name)
+  optional k8s.io.api.core.v1.ObjectReference ref = 2;
+
+  // PackageDependencies define the package dependencies the reference depend upon (repository, realm, package, (revision)
+  repeated github.com.kform_dev.pkg_server.apis.pkgid.Upstream packageDependencies = 3;
+
+  // RuntimeDependencies define the runtime dependencies the reference depend upon (apiversion, kind, namespace, name)
+  repeated k8s.io.api.core.v1.ObjectReference runtimeDependencies = 4;
+}
+
+message PackageRevisionDependencyError {
+  // Reference the error is sourced from (apiversion, kind, namespace, name)
+  optional k8s.io.api.core.v1.ObjectReference ref = 1;
+
+  optional string reason = 2;
 }
 
 // PackageRevisionList contains a list of PackageRevisions
@@ -118,6 +154,8 @@ message PackageRevisionStatus {
 
   // PublishedAt is the time when the packagerevision were approved.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time publishTimestamp = 3;
+
+  optional PackageRevisionDependencies dependencies = 4;
 }
 
 message Task {

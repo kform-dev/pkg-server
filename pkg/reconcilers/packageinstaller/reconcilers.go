@@ -192,7 +192,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// did the spec change
 		if rootSync.Spec.Git == nil ||
 			rootSync.Spec.Git.Revision != cr.Spec.PackageID.GitRevision() ||
-			rootSync.Spec.Git.Branch != cr.Spec.PackageID.Branch() {
+			rootSync.Spec.Git.Branch != cr.Spec.PackageID.Branch(false) {
 			rootSync, err := r.buildRootSync(ctx, cr)
 			if err != nil {
 				log.Error("cannot build rootSync", "error", err)
@@ -267,7 +267,7 @@ func (r *reconciler) buildRootSync(ctx context.Context, pkgRev *pkgv1alpha1.Pack
 				SourceType:   string(configv1alpha1.RepositoryTypeGit),
 				Git: &configsyncv1beta1.Git{
 					Repo:     repo.Spec.Git.URL,
-					Branch:   pkgRev.Spec.PackageID.Branch(),
+					Branch:   pkgRev.Spec.PackageID.Branch(false),
 					Revision: pkgRev.Spec.PackageID.GitRevision(),
 					Dir:      pkgRev.Spec.PackageID.OutDir(),
 					Auth:     "token",

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/kform-dev/pkg-server/apis/condition"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetCondition returns the condition based on the condition kind
@@ -118,4 +119,17 @@ func (r *Repository) GetDirectory() string {
 		}
 	}
 	return ""
+}
+
+// BuildRepository returns an Repository from a client Object a Spec/Status
+func BuildRepository(meta metav1.ObjectMeta, spec RepositorySpec, status RepositoryStatus) *Repository {
+	return &Repository{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: SchemeGroupVersion.Identifier(),
+			Kind:       RepositoryKind,
+		},
+		ObjectMeta: meta,
+		Spec:       spec,
+		Status:     status,
+	}
 }

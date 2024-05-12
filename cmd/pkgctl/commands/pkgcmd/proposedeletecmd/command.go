@@ -1,24 +1,23 @@
-package listcmd
+package proposedeletecmd
 
 import (
 	"context"
-	"fmt"
-	"sort"
 
 	//docs "github.com/kform-dev/pkg-server/internal/docs/generated/initdocs"
 
 	pkgv1alpha1 "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1"
 	"github.com/kform-dev/pkg-server/pkg/client"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // NewRunner returns a command runner.
-func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags) *Runner {
+func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags, k8s bool) *Runner {
 	r := &Runner{}
 	cmd := &cobra.Command{
-		Use:  "list [flags]",
-		Args: cobra.ExactArgs(0),
+		Use:  "propose-delete PKGREV [flags]",
+		Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
@@ -35,8 +34,8 @@ func NewRunner(ctx context.Context, version string, cfg *genericclioptions.Confi
 	return r
 }
 
-func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(ctx, version, kubeflags).Command
+func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags, k8s bool) *cobra.Command {
+	return NewRunner(ctx, version, kubeflags, k8s).Command
 }
 
 type Runner struct {
@@ -57,21 +56,20 @@ func (r *Runner) preRunE(_ *cobra.Command, _ []string) error {
 func (r *Runner) runE(c *cobra.Command, args []string) error {
 	ctx := c.Context()
 	//log := log.FromContext(ctx)
-	//log.Info("get packagerevision", "name", args[0])
+	//log.Info("deletepropose packagerevision", "name", args[0])
 
-	pkgRevList := &pkgv1alpha1.PackageRevisionList{}
-	if err := r.client.List(ctx, pkgRevList); err != nil {
+	namespace := "default"
+	if r.cfg.Namespace != nil && *r.cfg.Namespace != "" {
+		namespace = *r.cfg.Namespace
+	}
+
+	pkgRev := &pkgv1alpha1.PackageRevision{}
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: args[0]}, pkgRev); err != nil {
 		return err
 	}
-	pkgRevs := make([]pkgv1alpha1.PackageRevision, len(pkgRevList.Items))
-	copy(pkgRevs, pkgRevList.Items)
-	sort.SliceStable(pkgRevs, func(i, j int) bool {
-		return pkgRevs[i].Name < pkgRevs[j].Name
-	})
 
-	for _, pkgRev := range pkgRevs {
-		fmt.Println(pkgRev.Name, pkgRev.Spec.PackageID.Package, pkgRev.Spec.PackageID.Workspace, pkgRev.Spec.PackageID.Revision, pkgRev.Spec.Lifecycle)
-	}
+	pkgRev.Spec.Tasks = []pkgv1alpha1.Task{}
+	pkgRev.Spec.Lifecycle = pkgv1alpha1.PackageRevisionLifecycleDeletionProposed
 
-	return nil
+	return r.client.Update(ctx, pkgRev)
 }

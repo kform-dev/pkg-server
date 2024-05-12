@@ -3,17 +3,14 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/approvecmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/createcmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/deletecmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/draftcmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/getcmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/listcmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/proposecmd"
-	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/proposedeletecmd"
+	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/pkgcmd"
+	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/repocmd"
+	"github.com/kform-dev/pkg-server/cmd/pkgctl/commands/secretcmd"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -71,19 +68,22 @@ func GetMain(ctx context.Context) *cobra.Command {
 	kubeflags := genericclioptions.NewConfigFlags(true)
 	kubeflags.AddFlags(pf)
 
+	var k8s bool
+	cmd.Flags().BoolVarP(&k8s, "k8s", "k", false, "when set to true execute the command on the k8s cluster, otherwise it is execute locally")
+
 	kubeflags.WrapConfigFn = func(rc *rest.Config) *rest.Config {
 		rc.UserAgent = fmt.Sprintf("pkg/%s", version)
 		return rc
 	}
 
-	cmd.AddCommand(createcmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(draftcmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(proposecmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(approvecmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(proposedeletecmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(deletecmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(getcmd.NewCommand(ctx, version, kubeflags))
-	cmd.AddCommand(listcmd.NewCommand(ctx, version, kubeflags))
+	// ensure the viper config directory exists
+	cobra.CheckErr(os.MkdirAll(path.Join(xdg.ConfigHome, defaultConfigFileSubDir), 0700))
+	// initialize viper settings
+	initConfig()
+
+	cmd.AddCommand(pkgcmd.GetCommand(ctx, version, kubeflags, k8s))
+	cmd.AddCommand(secretcmd.GetCommand(ctx, version, kubeflags, k8s))
+	cmd.AddCommand(repocmd.GetCommand(ctx, version, kubeflags, k8s))
 	//cmd.PersistentFlags().StringVar(&configFile, "config", "c", fmt.Sprintf("Default config file (%s/%s/%s.%s)", xdg.ConfigHome, defaultConfigFileSubDir, defaultConfigFileName, defaultConfigFileNameExt))
 
 	return cmd
@@ -101,9 +101,9 @@ func initConfig() {
 		viper.SetConfigFile(configFile)
 	} else {
 
-		viper.AddConfigPath(filepath.Join(xdg.ConfigHome, defaultConfigFileName, defaultConfigFileNameExt))
+		viper.AddConfigPath(filepath.Join(xdg.ConfigHome, defaultConfigFileSubDir))
 		viper.SetConfigType(defaultConfigFileNameExt)
-		viper.SetConfigName(defaultConfigFileSubDir)
+		viper.SetConfigName(defaultConfigFileName)
 
 		_ = viper.SafeWriteConfig()
 	}

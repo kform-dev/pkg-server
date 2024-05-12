@@ -27,6 +27,7 @@ replace k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.28.6
 require (
 	github.com/GoogleContainerTools/kpt-functions-sdk/go/fn v0.0.0-20230427202446-3255accc518d
 	github.com/adrg/xdg v0.4.0
+	github.com/fatih/color v1.14.1
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/gogo/protobuf v1.3.2
@@ -36,7 +37,7 @@ require (
 	github.com/henderiw/apiserver-store v0.0.0-20240223013812-a4101101019f
 	github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe
 	github.com/henderiw/resource v0.0.0-20231228040228-cf28542fa2c6
-	github.com/henderiw/store v0.0.0-20240227111821-0eb66e3c7b40
+	github.com/henderiw/store v0.0.0-20240311135319-eb32ab80594b
 	github.com/kform-dev/kform v0.0.3-0.20240307073840-f5b4136c34b6
 	github.com/nephio-project/nephio/krm-functions/lib v0.0.0-20240112001535-96b08ff4acb3
 	github.com/pkg/errors v0.9.1
@@ -48,15 +49,15 @@ require (
 	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.6.0
 	google.golang.org/grpc v1.61.1
-	google.golang.org/protobuf v1.32.0
-	k8s.io/api v0.29.2
+	google.golang.org/protobuf v1.33.0
+	k8s.io/api v0.29.3
 	k8s.io/apiextensions-apiserver v0.29.0
-	k8s.io/apimachinery v0.29.2
+	k8s.io/apimachinery v0.29.3
 	k8s.io/apiserver v0.29.2
-	k8s.io/cli-runtime v0.29.1
-	k8s.io/client-go v0.29.2
+	k8s.io/cli-runtime v0.29.3
+	k8s.io/client-go v0.29.3
 	k8s.io/code-generator v0.29.2
-	k8s.io/component-base v0.29.2
+	k8s.io/component-base v0.29.3
 	k8s.io/kube-aggregator v0.29.2
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
@@ -100,7 +101,7 @@ require (
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-task/slim-sprig v2.20.0+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/cel-go v0.18.2 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
@@ -122,6 +123,8 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -183,7 +186,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kms v0.29.2 // indirect
+	k8s.io/kms v0.29.3 // indirect
+	k8s.io/kubectl v0.28.8 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/cli-utils v0.35.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

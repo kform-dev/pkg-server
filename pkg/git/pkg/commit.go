@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -37,10 +39,13 @@ const (
 )
 
 type commitHelper struct {
-	repository *gitRepository
+	repo *git.Repository
 
 	// parentCommitHash holds the parent commit, or nil if this is the first commit.
-	parentCommitHash plumbing.Hash
+	parentCommit *object.Commit
+
+	// packagePath defines the full path of the package
+	packagePath string
 
 	// trees holds a map of all the tree objects we are writing to.
 	// We reuse the existing object.Tree structures.
@@ -56,47 +61,63 @@ func getCommitMessage(pkgRev *pkgv1alpha1.PackageRevision, msg string) (string, 
 	return AnnotateCommitMessage(message, annotation)
 }
 
-func newCommitHelper(ctx context.Context, repo *gitRepository, parentCommitHash plumbing.Hash, packagePath string, packageTree plumbing.Hash) (*commitHelper, error) {
-	log := log.FromContext(ctx)
-	ch := &commitHelper{
-		repository:       repo,
-		parentCommitHash: parentCommitHash,
+func newCommithelper(repo *git.Repository, parentCommit *object.Commit) *commitHelper {
+	return &commitHelper{
+		repo:         repo,
+		parentCommit: parentCommit, // either main or latest revision of package or latest commit in branch
 	}
-	var rootTree *object.Tree
-	if parentCommitHash.IsZero() {
-		log.Debug("newCommitHelper: empty hash")
+}
+
+func (r *commitHelper) Initialize(ctx context.Context, repoDir string, pkgRev *pkgv1alpha1.PackageRevision) error {
+	// based on the parent commit get the package resources from the parent commit
+	// it could return an nil pointer in which case no resources were found
+	// hence we translate it in a ZeroHash
+	r.packagePath = filepath.Join(repoDir, pkgRev.Spec.PackageID.Path())
+	packageTree, err := getPackageTree(ctx, pkgRev.Spec.PackageID, r.parentCommit)
+	if err != nil {
+		return err
+	}
+	packageTreeHash := plumbing.ZeroHash
+	if packageTree != nil {
+		packageTreeHash = packageTree.Hash
+	}
+
+	rootTree, err := r.getRootTree(ctx)
+	if err != nil {
+		return err
+	}
+	return r.initializeTrees(ctx, rootTree, packageTreeHash)
+}
+
+func (r *commitHelper) getRootTree(_ context.Context) (*object.Tree, error) {
+	if r.parentCommit.Hash.IsZero() {
 		// No parent commit, start with an empty tree
-		rootTree = &object.Tree{}
+		return &object.Tree{}, nil
 	} else {
-		parentCommit, err := ch.repository.repo.Repo.CommitObject(parentCommitHash)
+		parentCommit, err := r.repo.CommitObject(r.parentCommit.Hash)
 		if err != nil {
-			return nil, fmt.Errorf("cannot resolve parent commit hash %s to commit: %w", parentCommitHash, err)
+			return nil, fmt.Errorf("cannot resolve parent commit hash %s to commit: %w", r.parentCommit.Hash, err)
 		}
 		t, err := parentCommit.Tree()
 		if err != nil {
 			return nil, fmt.Errorf("cannot resolve parent commit's (%s) tree (%s) to tree object: %w", parentCommit.Hash, parentCommit.TreeHash, err)
 		}
-		rootTree = t
+		return t, err
 	}
-	if err := ch.initializeTrees(ctx, rootTree, packagePath, packageTree); err != nil {
-		return nil, err
-	}
-
-	return ch, nil
 }
 
 // initializeTrees initializes the tree context in the commitHelper.
 // It initialized the ancestor trees of the package.
-func (r *commitHelper) initializeTrees(ctx context.Context, rootTree *object.Tree, packagePath string, packageTreeHash plumbing.Hash) error {
+func (r *commitHelper) initializeTrees(ctx context.Context, rootTree *object.Tree, packageTreeHash plumbing.Hash) error {
 	log := log.FromContext(ctx)
-	log.Debug("initializeTrees")
+	log.Info("initializeTrees", "packagePath", r.packagePath)
 	r.trees = map[string]*object.Tree{
 		"": rootTree,
 	}
-	parts := strings.Split(packagePath, "/")
+	parts := strings.Split(r.packagePath, "/")
 	if len(parts) == 0 {
 		// empty package path is invalid
-		return fmt.Errorf("invalid package path: %q", packagePath)
+		return fmt.Errorf("invalid package path: %q", r.packagePath)
 	}
 
 	// Load all ancestor trees
@@ -114,7 +135,7 @@ func (r *commitHelper) initializeTrees(ctx context.Context, rootTree *object.Tre
 		case existing.Mode == filemode.Dir:
 			// Existing entry is a tree. use it
 			hash := existing.Hash
-			curr, err := object.GetTree(r.repository.repo.Repo.Storer, hash)
+			curr, err := object.GetTree(r.repo.Storer, hash)
 			if err != nil {
 				return fmt.Errorf("cannot read existing tree %s; root %q, path %q", hash, rootTree.Hash, path)
 			}
@@ -139,26 +160,36 @@ func (r *commitHelper) initializeTrees(ctx context.Context, rootTree *object.Tre
 	lastPart := parts[len(parts)-1]
 	if !packageTreeHash.IsZero() {
 		// Initialize with the supplied package tree.
-		packageTree, err := object.GetTree(r.repository.repo.Repo.Storer, packageTreeHash)
+		packageTree, err := object.GetTree(r.repo.Storer, packageTreeHash)
 		if err != nil {
-			return fmt.Errorf("cannot find existing package tree %s for package %q: %w", packageTreeHash, packagePath, err)
+			return fmt.Errorf("cannot find existing package tree %s for package %q: %w", packageTreeHash, r.packagePath, err)
 		}
-		r.trees[packagePath] = packageTree
+		r.trees[r.packagePath] = packageTree
 		setOrAddTreeEntry(parent, object.TreeEntry{
 			Name: lastPart,
 			Mode: filemode.Dir,
 			Hash: plumbing.ZeroHash,
 		})
-		
 	} else {
 		// Remove the entry if one exists
+		fmt.Println("initializeTrees last part removeTreeEntry", lastPart)
 		removeTreeEntry(parent, lastPart)
 	}
 	return nil
 }
 
+func (r *commitHelper) initPackage() error {
+	tree, ok := r.trees[r.packagePath]
+	if !ok {
+		return nil
+	}
+	tree.Entries = []object.TreeEntry{}
+	return nil
+}
+
 // storeFile writes a blob with contents at the specified path
 func (r *commitHelper) storeFile(path, contents string) error {
+	path = filepath.Join(r.packagePath, path)
 	hash, err := r.storeBlob(contents)
 	if err != nil {
 		return err
@@ -172,7 +203,7 @@ func (r *commitHelper) storeFile(path, contents string) error {
 
 func (r *commitHelper) storeBlob(val string) (plumbing.Hash, error) {
 	data := []byte(val)
-	eo := r.repository.repo.Repo.Storer.NewEncodedObject()
+	eo := r.repo.Storer.NewEncodedObject()
 	eo.SetType(plumbing.BlobObject)
 	eo.SetSize(int64(len(data)))
 
@@ -190,7 +221,7 @@ func (r *commitHelper) storeBlob(val string) (plumbing.Hash, error) {
 		return plumbing.Hash{}, err
 	}
 
-	return r.repository.repo.Repo.Storer.SetEncodedObject(eo)
+	return r.repo.Storer.SetEncodedObject(eo)
 }
 
 // storeBlobHashInTrees writes the (previously stored) blob hash at fullpath, marking all the directory trees as dirty.
@@ -213,6 +244,7 @@ func (r *commitHelper) storeBlobHashInTrees(fullPath string, hash plumbing.Hash)
 // ensureTrees ensures we have a trees for all directories in fullPath.
 // fullPath is expected to be a directory path.
 func (r *commitHelper) ensureTree(fullPath string) *object.Tree {
+	fmt.Println("fullpath", fullPath)
 	if tree, ok := r.trees[fullPath]; ok {
 		return tree
 	}
@@ -243,6 +275,7 @@ added:
 
 // storeTrees writes the tree at treePath to git, first writing all child trees.
 func (r *commitHelper) storeTrees(treePath string) (plumbing.Hash, error) {
+	fmt.Println("storeTrees treePath:", treePath)
 	tree, ok := r.trees[treePath]
 	if !ok {
 		return plumbing.Hash{}, fmt.Errorf("failed to find a tree %q", treePath)
@@ -255,23 +288,29 @@ func (r *commitHelper) storeTrees(treePath string) (plumbing.Hash, error) {
 
 	// Store all child trees and get their hashes
 	for i := range entries {
-		e := &entries[i]
-		if e.Mode != filemode.Dir {
+		entry := &entries[i]
+		if entry.Mode != filemode.Dir {
 			continue
 		}
-		if !e.Hash.IsZero() {
+		if !entry.Hash.IsZero() {
 			continue
 		}
 
-		hash, err := r.storeTrees(path.Join(treePath, e.Name))
+		hash, err := r.storeTrees(path.Join(treePath, entry.Name))
 		if err != nil {
 			return plumbing.Hash{}, err
 		}
-		e.Hash = hash
+		entry.Hash = hash
+	}
+	if treePath == "infra/workload-cluster/capi-kind" {
+		removeTreeEntry(tree, "infra")
+		removeTreeEntry(tree, "out_cluster.yaml")
+		removeTreeEntry(tree, "in_cluster.yaml")
 	}
 
 	treeHash, err := r.storeTree(tree)
 	if err != nil {
+		fmt.Println("storeTrees err", err)
 		return plumbing.Hash{}, err
 	}
 
@@ -280,24 +319,26 @@ func (r *commitHelper) storeTrees(treePath string) (plumbing.Hash, error) {
 }
 
 func (r *commitHelper) storeTree(tree *object.Tree) (plumbing.Hash, error) {
-	eo := r.repository.repo.Repo.Storer.NewEncodedObject()
+	eo := r.repo.Storer.NewEncodedObject()
 	if err := tree.Encode(eo); err != nil {
 		return plumbing.Hash{}, err
 	}
 
-	treeHash, err := r.repository.repo.Repo.Storer.SetEncodedObject(eo)
+	treeHash, err := r.repo.Storer.SetEncodedObject(eo)
 	if err != nil {
+		fmt.Println("storeTrees err", err)
 		return plumbing.Hash{}, err
 	}
 	return treeHash, nil
 }
 
 // commit stores all changes in git and creates a commit object.
-func (r *commitHelper) commit(ctx context.Context, message string, pkgPath string, additionalParentCommits ...plumbing.Hash) (commit, pkgTree plumbing.Hash, err error) {
+func (r *commitHelper) commit(ctx context.Context, message string, additionalParentCommits ...plumbing.Hash) (commit, pkgTree plumbing.Hash, err error) {
 	log := log.FromContext(ctx)
 	log.Debug("commit")
 	rootTreeHash, err := r.storeTrees("")
 	if err != nil {
+		log.Error("failed to store commit tree", "error", err.Error())
 		return plumbing.ZeroHash, plumbing.ZeroHash, err
 	}
 
@@ -309,20 +350,21 @@ func (r *commitHelper) commit(ctx context.Context, message string, pkgPath strin
 	*/
 
 	var parentCommits []plumbing.Hash
-	if !r.parentCommitHash.IsZero() {
-		parentCommits = append(parentCommits, r.parentCommitHash)
+	if !r.parentCommit.Hash.IsZero() {
+		parentCommits = append(parentCommits, r.parentCommit.Hash)
 	}
 	parentCommits = append(parentCommits, additionalParentCommits...)
 
 	commitHash, err := r.storeCommit(parentCommits, rootTreeHash, message)
 	if err != nil {
+		log.Error("failed to store commit", "error", err.Error())
 		return plumbing.ZeroHash, plumbing.ZeroHash, err
 	}
 	// Update the parentCommitHash so the correct parent will be used for the
 	// next commit.
-	r.parentCommitHash = commitHash
+	r.parentCommit.Hash = commitHash
 
-	if pkg, ok := r.trees[pkgPath]; ok {
+	if pkg, ok := r.trees[r.packagePath]; ok {
 		pkgTree = pkg.Hash
 	} else {
 		pkgTree = plumbing.ZeroHash
@@ -353,11 +395,11 @@ func (r *commitHelper) storeCommit(parentCommits []plumbing.Hash, tree plumbing.
 		commit.ParentHashes = parentCommits
 	}
 
-	eo := r.repository.repo.Repo.Storer.NewEncodedObject()
+	eo := r.repo.Storer.NewEncodedObject()
 	if err := commit.Encode(eo); err != nil {
 		return plumbing.Hash{}, err
 	}
-	hash, err := r.repository.repo.Repo.Storer.SetEncodedObject(eo)
+	hash, err := r.repo.Storer.SetEncodedObject(eo)
 	if err != nil {
 		return plumbing.Hash{}, err
 	}

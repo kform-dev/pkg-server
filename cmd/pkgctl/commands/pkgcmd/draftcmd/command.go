@@ -1,4 +1,4 @@
-package proposecmd
+package draftcmd
 
 import (
 	"context"
@@ -13,10 +13,10 @@ import (
 )
 
 // NewRunner returns a command runner.
-func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags) *Runner {
+func NewRunner(ctx context.Context, version string, cfg *genericclioptions.ConfigFlags, k8s bool) *Runner {
 	r := &Runner{}
 	cmd := &cobra.Command{
-		Use:  "propose PKGREV [flags]",
+		Use:  "draft PKGREV [flags]",
 		Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
@@ -34,8 +34,8 @@ func NewRunner(ctx context.Context, version string, cfg *genericclioptions.Confi
 	return r
 }
 
-func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(ctx, version, kubeflags).Command
+func NewCommand(ctx context.Context, version string, kubeflags *genericclioptions.ConfigFlags, k8s bool) *cobra.Command {
+	return NewRunner(ctx, version, kubeflags, k8s).Command
 }
 
 type Runner struct {
@@ -56,15 +56,20 @@ func (r *Runner) preRunE(_ *cobra.Command, _ []string) error {
 func (r *Runner) runE(c *cobra.Command, args []string) error {
 	ctx := c.Context()
 	//log := log.FromContext(ctx)
-	//log.Info("propose packagerevision", "name", args[0])
+	//log.Info("draft packagerevision", "name", args[0])
+
+	namespace := "default"
+	if r.cfg.Namespace != nil && *r.cfg.Namespace != "" {
+		namespace = *r.cfg.Namespace
+	}
 
 	pkgRev := &pkgv1alpha1.PackageRevision{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: "default", Name: args[0]}, pkgRev); err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: args[0]}, pkgRev); err != nil {
 		return err
 	}
 
 	pkgRev.Spec.Tasks = []pkgv1alpha1.Task{}
-	pkgRev.Spec.Lifecycle = pkgv1alpha1.PackageRevisionLifecycleProposed
+	pkgRev.Spec.Lifecycle = pkgv1alpha1.PackageRevisionLifecycleDraft
 
 	return r.client.Update(ctx, pkgRev)
 }

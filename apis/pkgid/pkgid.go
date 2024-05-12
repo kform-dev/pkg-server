@@ -43,18 +43,68 @@ type PackageID struct {
 	Workspace string `json:"workspace,omitempty" protobuf:"bytes,6,opt,name=workspace"`
 }
 
-func ParsePkgID(pkgstr string) (*PackageID, error) {
+func ParsePkgRev2PkgID(pkgstr string) (*PackageID, error) {
 	parts := strings.Split(pkgstr, ".")
 	if len(parts) != 5 {
-		return &PackageID{}, fmt.Errorf("pkgString should contain 3 parameters <TARGET>.<REPO>.<REALM>.<PKG>.<WORKSPACE>, got: %s", pkgstr)
+		return &PackageID{}, fmt.Errorf("pkgString should contain 5 parameters <TARGET>.<REPO>.<REALM>.<PKG>.<WORKSPACE>, got: %s", pkgstr)
 	}
 	return &PackageID{
 		Target:     parts[0],
 		Repository: parts[1],
-		Realm:      parts[2],
+		Realm:      strings.ReplaceAll(parts[2], ":", "/"),
 		Package:    parts[3],
 		Workspace:  parts[4],
 	}, nil
+}
+
+func ParseTag(tagstr string, catalog bool) (*PackageID, error) {
+	parts := strings.Split(tagstr, "/")
+	if catalog {
+		if len(parts) < 2 {
+			return &PackageID{}, fmt.Errorf("pkgString should contain 2 parameters [<REALM>]/<PKG>/<REVISION>, got: %s", tagstr)
+		}
+		return &PackageID{
+			Target:   PkgTarget_Catalog,
+			Realm:    path.Join(parts[0 : len(parts)-2]...),
+			Package:  parts[len(parts)-2],
+			Revision: parts[len(parts)-1],
+		}, nil
+	} else {
+		if len(parts) < 3 {
+			return &PackageID{}, fmt.Errorf("pkgString should contain 3 parameters <TARGET>/[<REALM>]/<PKG>/<REVISION>, got: %s", tagstr)
+		}
+		return &PackageID{
+			Target:   parts[0],
+			Realm:    path.Join(parts[1 : len(parts)-2]...),
+			Package:  parts[len(parts)-2],
+			Revision: parts[len(parts)-1],
+		}, nil
+	}
+}
+
+func ParseBranch(tagstr string, catalog bool) (*PackageID, error) {
+	parts := strings.Split(tagstr, "/")
+	if catalog {
+		if len(parts) < 2 {
+			return &PackageID{}, fmt.Errorf("pkgString should contain 2 parameters [<REALM>]/<PKG>/<WORKSPACE>, got: %s", tagstr)
+		}
+		return &PackageID{
+			Target:    PkgTarget_Catalog,
+			Realm:     path.Join(parts[0 : len(parts)-2]...),
+			Package:   parts[len(parts)-2],
+			Workspace: parts[len(parts)-1],
+		}, nil
+	} else {
+		if len(parts) < 3 {
+			return &PackageID{}, fmt.Errorf("pkgString should contain 3 parameters <TARGET>/[<REALM>]/<PKG>/<WORKSPACE>, got: %s", tagstr)
+		}
+		return &PackageID{
+			Target:    parts[0],
+			Realm:     path.Join(parts[1 : len(parts)-2]...),
+			Package:   parts[len(parts)-2],
+			Workspace: parts[len(parts)-1],
+		}, nil
+	}
 }
 
 func (r *PackageID) PkgRevString() string {
@@ -84,8 +134,18 @@ func PackageToDir(pkg string) string {
 	return strings.ReplaceAll(pkg, ":", "/")
 }
 
-func (r *PackageID) Branch() string {
+func (r *PackageID) Branch(catalog bool) string {
+	if catalog {
+		return path.Join(r.Realm, r.Package, r.Workspace)
+	}
 	return path.Join(r.Target, r.Realm, r.Package, r.Workspace)
+}
+
+func (r *PackageID) Tag(catalog bool) string {
+	if catalog {
+		return path.Join(r.Realm, r.Package, r.Revision)
+	}
+	return path.Join(r.Target, r.Realm, r.Package, r.Revision)
 }
 
 func (r *PackageID) GitRevision() string {

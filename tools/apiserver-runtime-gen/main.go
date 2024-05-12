@@ -185,7 +185,7 @@ func doGen() error {
 	if gen["go-to-protobuf"] {
 		err := run(getCmd("go-to-protobuf",
 			"--packages", inputs,
-			"--apimachinery-packages", "-k8s.io/apimachinery/pkg/api/resource,-k8s.io/apimachinery/pkg/runtime/schema,-k8s.io/apimachinery/pkg/runtime,-k8s.io/apimachinery/pkg/apis/meta/v1",
+			"--apimachinery-packages", "-k8s.io/apimachinery/pkg/api/resource,-k8s.io/apimachinery/pkg/runtime/schema,-k8s.io/apimachinery/pkg/runtime,-k8s.io/apimachinery/pkg/apis/meta/v1,-k8s.io/api/core/v1",
 			"--proto-import", "./vendor",
 		))
 		if err != nil {

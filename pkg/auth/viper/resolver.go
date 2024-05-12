@@ -14,31 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pkgid
+package viper
 
-type PkgState int64
+import (
+	"context"
 
-const (
-	PkgState_NotAvailable PkgState = iota
-	PkgState_Scheduled
-	PkgState_Processed
-	PkgState_Validated // policy
-	PkgState_Approved
-	PkgState_Installed
+	"github.com/kform-dev/pkg-server/pkg/auth"
 )
 
-func (r PkgState) String() string {
-	switch r {
-	case PkgState_NotAvailable:
-		return "notAvailable"
-	case PkgState_Scheduled:
-		return "scheduled"
-	case PkgState_Processed:
-		return "processed"
-	case PkgState_Approved:
-		return "approved"
-	case PkgState_Installed:
-		return "installed"
-	}
-	return "unknown"
+type Resolver interface {
+	Resolve(ctx context.Context, secret string) (auth.Credential, error)
 }

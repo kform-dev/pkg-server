@@ -47,6 +47,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kform-dev/pkg-server/apis/config/v1alpha1.RepositoryStatus":            schema_pkg_server_apis_config_v1alpha1_RepositoryStatus(ref),
 		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevision":                schema_pkg_server_apis_pkg_v1alpha1_PackageRevision(ref),
 		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionApproval":        schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionApproval(ref),
+		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencies":    schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependencies(ref),
+		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependency":      schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependency(ref),
+		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencyError": schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependencyError(ref),
 		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionList":            schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionList(ref),
 		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionResources":       schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionResources(ref),
 		"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionResourcesList":   schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionResourcesList(ref),
@@ -766,6 +769,145 @@ func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionApproval(ref common.Refe
 	}
 }
 
+func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependencies(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"error": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Summary Error in case an error was discovered",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"errors": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Errors define the detailed error per reference",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencyError"),
+									},
+								},
+							},
+						},
+					},
+					"warnings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Warnings define the detailed warning per reference",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencyError"),
+									},
+								},
+							},
+						},
+					},
+					"dependencies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Dependencies define the dependency details per reference",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependency"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependency", "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencyError"},
+	}
+}
+
+func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependency(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type defines the type of dependency we refer to",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reference the dependency is sourced from (apiversion, kind, namespace, name)",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"packageDependencies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PackageDependencies define the package dependencies the reference depend upon (repository, realm, package, (revision)",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kform-dev/pkg-server/apis/pkgid.Upstream"),
+									},
+								},
+							},
+						},
+					},
+					"runtimeDependencies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RuntimeDependencies define the runtime dependencies the reference depend upon (apiversion, kind, namespace, name)",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.ObjectReference"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kform-dev/pkg-server/apis/pkgid.Upstream", "k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
+func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionDependencyError(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reference the error is sourced from (apiversion, kind, namespace, name)",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference"},
+	}
+}
+
 func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1090,11 +1232,16 @@ func schema_pkg_server_apis_pkg_v1alpha1_PackageRevisionStatus(ref common.Refere
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"dependencies": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencies"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/kform-dev/pkg-server/apis/condition.Condition", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/kform-dev/pkg-server/apis/condition.Condition", "github.com/kform-dev/pkg-server/apis/pkg/v1alpha1.PackageRevisionDependencies", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

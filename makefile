@@ -9,12 +9,6 @@ REPO = github.com/kform-dev/pkg-server
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CONTROLLER_TOOLS_VERSION ?= v0.12.1
 
-# go versions
-TARGET_GO_VERSION := go1.21.4
-GO_FALLBACK := go
-# We prefer $TARGET_GO_VERSION if it is not available we go with whatever go we find ($GO_FALLBACK)
-GO_BIN := $(shell if [ "$$(which $(TARGET_GO_VERSION))" != "" ]; then echo $$(which $(TARGET_GO_VERSION)); else echo $$(which $(GO_FALLBACK)); fi)
-
 .PHONY: codegen fix fmt vet lint test tidy
 
 GOBIN := $(shell go env GOPATH)/bin
@@ -24,7 +18,7 @@ all: codegen fmt vet lint test tidy
 .PHONY:
 build:
 	mkdir -p bin
-	CGO_ENABLED=0 ${GO_BIN} build -o bin/pkgctl cmd/pkgctl/main.go 
+	CGO_ENABLED=0 ${GOBIN} build -o bin/pkgctl cmd/pkgctl/main.go 
 
 .PHONY:
 docker:

@@ -21,6 +21,7 @@ import (
 
 	"github.com/kform-dev/pkg-server/apis/condition"
 	"github.com/kform-dev/pkg-server/apis/pkgid"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -41,21 +42,32 @@ const (
 	TaskTypeClone TaskType = "clone"
 )
 
+type UpdatePolicy string
+
+const (
+	UpdatePolicy_Loose  UpdatePolicy = "loose"
+	UpdatePolicy_Strict UpdatePolicy = "strict"
+)
+
 // PackageRevisionSpec defines the desired state of PackageRevision
 type PackageRevisionSpec struct {
-	PackageID pkgid.PackageID `json:"packageID" protobuf:"bytes,6,opt,name=packageID"`
+	PackageID pkgid.PackageID `json:"packageID" protobuf:"bytes,1,opt,name=packageID"`
 	// Lifecycle defines the lifecycle of the resource
-	Lifecycle PackageRevisionLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,1,opt,name=lifecycle"`
+	Lifecycle PackageRevisionLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,2,opt,name=lifecycle"`
+	// UpdatePolicy is the policy used to update resources
+	// Loose updates the resources w/o removing the other entries in the package
+	// strict updates the resources and removes unnessesary entries in the package
+	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty" protobuf:"bytes,3,rep,name=updatePolicy"`
 	// Task is the task to be performed when creating this package revisision
-	Tasks []Task `json:"tasks,omitempty" protobuf:"bytes,2,rep,name=tasks"`
+	Tasks []Task `json:"tasks,omitempty" protobuf:"bytes,4,rep,name=tasks"`
 	// ReadinessGates define the conditions that need to be acted upon before considering the PackageRevision
 	// ready for approval
-	ReadinessGates []condition.ReadinessGate `json:"readinessGates,omitempty" protobuf:"bytes,3,rep,name=readinessGates"`
+	ReadinessGates []condition.ReadinessGate `json:"readinessGates,omitempty" protobuf:"bytes,5,rep,name=readinessGates"`
 	// Upstream identifies the upstream this package is originated from
-	Upstream *pkgid.Upstream `json:"upstream,omitempty" protobuf:"bytes,4,opt,name=upstream"`
+	Upstream *pkgid.Upstream `json:"upstream,omitempty" protobuf:"bytes,6,opt,name=upstream"`
 	// Inputs define the inputs defined for the PackageContext
 	//+kubebuilder:pruning:PreserveUnknownFields
-	Inputs []runtime.RawExtension `json:"inputs,omitempty" protobuf:"bytes,5,rep,name=inputs"`
+	Inputs []runtime.RawExtension `json:"inputs,omitempty" protobuf:"bytes,7,rep,name=inputs"`
 }
 
 type Task struct {
@@ -73,6 +85,45 @@ type PackageRevisionStatus struct {
 
 	// PublishedAt is the time when the packagerevision were approved.
 	PublishedAt metav1.Time `json:"publishTimestamp,omitempty" protobuf:"bytes,3,opt,name=publishTimestamp"`
+
+	Dependencies *PackageRevisionDependencies `json:"dependencies,omitempty" protobuf:"bytes,4,opt,name=dependencies"`
+}
+
+type PackageRevisionDependencies struct {
+	// Summary Error in case an error was discovered
+	Error *string `json:"error,omitempty" protobuf:"bytes,1,opt,name=error"`
+	// Errors define the detailed error per reference
+	Errors []*PackageRevisionDependencyError `json:"errors,omitempty" protobuf:"bytes,2,rep,name=errors"`
+	// Warnings define the detailed warning per reference
+	Warnings []*PackageRevisionDependencyError `json:"warnings,omitempty" protobuf:"bytes,3,rep,name=warnings"`
+	// Dependencies define the dependency details per reference
+	Dependencies []*PackageRevisionDependency `json:"dependencies,omitempty" protobuf:"bytes,4,rep,name=dependencies"`
+}
+
+type PackageRevisionDependencyType string
+
+const (
+	PackageRevisionDependencyType_Core    PackageRevisionDependencyType = "core"
+	PackageRevisionDependencyType_Package PackageRevisionDependencyType = "package"
+	PackageRevisionDependencyType_Runtime PackageRevisionDependencyType = "runtime"
+)
+
+type PackageRevisionDependencyError struct {
+	// Reference the error is sourced from (apiversion, kind, namespace, name)
+	Ref *corev1.ObjectReference `json:"ref,omitempty" protobuf:"bytes,1,opt,name=ref"`
+	// Reason describes the reason why the dependency failed
+	Reason string `json:"reason,omitempty" protobuf:"bytes,2,opt,name=reason"`
+}
+
+type PackageRevisionDependency struct {
+	// Type defines the type of dependency we refer to
+	Type PackageRevisionDependencyType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
+	// Reference the dependency is sourced from (apiversion, kind, namespace, name)
+	Ref *corev1.ObjectReference `json:"ref,omitempty" protobuf:"bytes,2,opt,name=ref"`
+	// PackageDependencies define the package dependencies the reference depend upon (repository, realm, package, (revision)
+	PackageDependencies []*pkgid.Upstream `json:"packageDependencies,omitempty" protobuf:"bytes,3,rep,name=packageDependencies"`
+	// RuntimeDependencies define the runtime dependencies the reference depend upon (apiversion, kind, namespace, name)
+	RuntimeDependencies []*corev1.ObjectReference `json:"runtimeDependencies,omitempty" protobuf:"bytes,4,rep,name=runtimeDependencies"`
 }
 
 // +genclient

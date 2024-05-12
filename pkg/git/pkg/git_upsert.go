@@ -20,8 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -94,42 +92,38 @@ func (r *gitRepository) UpsertPackageRevision(ctx context.Context, pkgRev *pkgv1
 }
 
 func (r *gitRepository) commit(ctx context.Context, pkgRev *pkgv1alpha1.PackageRevision, resources map[string]string) (plumbing.Hash, error) {
+	log := log.FromContext(ctx)
 	// get the parent commit
 	// could be either the head of the main branch or the latest pkg revision
 	parentCommit, commitMsg, err := r.getParentCommit(ctx, pkgRev)
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
+	// get the commit helper, the packageTree Hash allows to add the resources of the
+	// parent package if this is the strategy that was adopted
+	ch := newCommithelper(r.repo.Repo, parentCommit)
+
 	// get the commit message
 	commitMessage, err := getCommitMessage(pkgRev, commitMsg)
 	if err != nil {
 		return plumbing.ZeroHash, err
 	}
-	// based on the parent commit get the package resources from the parent commit
-	// it could return an nil pointer in which case no resources were found
-	// hence we translate it in a ZeroHash
-	packagePath := filepath.Join(r.cr.GetDirectory(), pkgRev.Spec.PackageID.Path())
-	packageTree, err := getPackageTree(ctx, pkgRev.Spec.PackageID, parentCommit)
-	if err != nil {
+	if err := ch.Initialize(ctx, r.cr.GetDirectory(), pkgRev); err != nil {
 		return plumbing.ZeroHash, err
 	}
-	packageTreeHash := plumbing.ZeroHash
-	if packageTree != nil {
-		packageTreeHash = packageTree.Hash
+	if pkgRev.Spec.UpdatePolicy == pkgv1alpha1.UpdatePolicy_Strict {
+		ch.initPackage()
 	}
-	// get the commit helper, the packageTree Hash allows to add the resources of the
-	// parent package if this is the strategy that was adopted
-	ch, err := newCommitHelper(ctx, r, parentCommit.Hash, packagePath, packageTreeHash)
-	if err != nil {
-		return plumbing.ZeroHash, err
-	}
+
 	// add the new resources to the commit helper
 	for k, v := range resources {
-		ch.storeFile(path.Join(packagePath, k), v)
+		// append the file root package directory to the path
+		ch.storeFile(k, v)
 	}
 	// commit the resources
-	commitHash, _, err := ch.commit(ctx, commitMessage, packagePath)
+	commitHash, _, err := ch.commit(ctx, commitMessage)
 	if err != nil {
+		log.Error("failed to commit", "error", err.Error())
 		return plumbing.ZeroHash, fmt.Errorf("failed to commit package: %w", err)
 	}
 
@@ -143,10 +137,12 @@ func (r *gitRepository) commit(ctx context.Context, pkgRev *pkgv1alpha1.PackageR
 
 	specs, require, err := refSpecs.BuildRefSpecs()
 	if err != nil {
+		log.Error("failed to build push commit ref specs", "error", err.Error())
 		return plumbing.ZeroHash, err
 	}
 	if err := r.repo.PushAndCleanup(ctx, specs, require); err != nil {
 		if !errors.Is(err, git.NoErrAlreadyUpToDate) {
+			log.Error("failed to push commit", "error", err.Error())
 			return plumbing.ZeroHash, err
 		}
 	}
